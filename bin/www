@@ -8,11 +8,14 @@ var app = require('../app');
 var debug = require('debug')('mineiota:server');
 var http = require('http');
 
+var env = process.env.NODE_ENV || 'development';
+var config = require('../config')[env];
+
 /**
  * Get port from environment and store in Express.
  */
 
-var port = normalizePort(process.env.PORT || '3000');
+var port = normalizePort(process.env.PORT || config.port);
 app.set('port', port);
 
 /**

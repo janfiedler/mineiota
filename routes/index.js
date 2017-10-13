@@ -265,12 +265,13 @@ function  getIotaToBtc() {
     });
 }
 
-http.listen(3003, function(){
+// WebSocket  SOCKET.IO listening
+http.listen(config.WebSocket.port, function(){
 });
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-  res.render('index', { title: 'IOTA Faucet - Get IOTA through mining Monero' });
+  res.render('index', { title: 'IOTA Faucet - Get IOTA through mining Monero', WebSocketPort:config.WebSocket.port, iotaProvider:"'"+config.iota.host+':'+config.iota.port+"'" });
 });
 
 module.exports = router;

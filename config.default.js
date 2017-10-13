@@ -1,10 +1,11 @@
 var config = {
     development: {
         debug: true,
+        port: 3000,
         url: 'http://yourwebsite.com',
         // IOTA Provider details
         iota: {
-            host:   'http://127.0.0.1',
+            host:   'https://yournode.com',
             port:   '14265',
             seed:   'YOUR99SEED'
         },
@@ -16,10 +17,14 @@ var config = {
             privateKey: 'coinHIvePrivateKeyHere',
             // How much percent take for final client reward
             feeRatio: 10
+        },
+        WebSocket: {
+            port:   '3003'
         }
     },
     production: {
         debug: false,
+        port: 3000,
         url: 'https://yourwebsite.com',
         // IOTA Provider details
         iota: {
@@ -35,6 +40,9 @@ var config = {
             privateKey: 'coinHIvePrivateKeyHere',
             // How much percent take for final client reward
             feeRatio: 10
+        },
+        WebSocket: {
+            port:   '3003'
         }
     }
 };

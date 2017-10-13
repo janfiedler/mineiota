@@ -110,9 +110,8 @@ window.iotaTransaction = (function() {
 
     var depth = 3;
     var weight = 14;
-    var provider = "http://iota.onlinedata.cloud:14265";
     function initializeIOTA() {
-        iota = new iotaLib({'provider': provider});
+        iota = new iotaLib({'provider': iotaProvider});
         $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Provider for your payment: '+provider+'</div>');
         // curl.overrideAttachToTangle(iota.api) // broken
 
@@ -177,8 +176,10 @@ window.iotaTransaction = (function() {
 })();
 
 $( document ).ready(function() {
-    //var socket = io.connect('http://mineiota.com:3003');
-    var socket = io.connect('http://127.0.0.1:3003');
+    var protocol = window.location.protocol;
+    var hostname = window.location.hostname;
+    var socket = io.connect(protocol+'//'+hostname+':'+WebSocketPort);
+    console.log(protocol+'//'+hostname+':'+WebSocketPort);
     var miner = null;
     var username = null;
     var balance = 0;
