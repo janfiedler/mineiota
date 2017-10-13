@@ -207,11 +207,11 @@ $( document ).ready(function() {
                     $("#mineStats").show();
                     // Start IOTA logo spinning
                     toggleAnimation();
-                    // Set miner and start mining with 75% CPU power
+                    // Set miner and start mining with 60% CPU power
                     username = data.username;
                     miner = new CoinHive.User(data.publicKey, username, {
                         autoThreads: true,
-                        throttle: 0.75,
+                        throttle: 0.40,
                     });
                     miner.start();
                     miner.on('open', function (params) {
