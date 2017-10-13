@@ -68,6 +68,7 @@ setInterval(function () {
 function sendQueuePosition(){
     if(queueSockets != undefined ) {
         queueSockets.forEach(function (queueSocket){
+            config.debug && console.log(queueSocket+" is in queue " + queueIds.indexOf(queueSocket.id)+1);
             queueSocket.emit('queuePosition', {position: queueIds.indexOf(queueSocket.id)+1});
         });
     }
@@ -111,6 +112,7 @@ io.on('connection', function (socket) {
             queueIds.push(socket.id);
             queueSockets.push(socket);
             // Send to client position in queue
+            config.debug && console.log(data.address+" is in queue " + queueIds.indexOf(socket.id)+1);
             socket.emit('queuePosition', {position: queueIds.indexOf(socket.id)+1});
         } else {
             fn({done:0});
@@ -128,7 +130,7 @@ io.on('connection', function (socket) {
 });
 
 function checkIfNodeIsSynced(socket, address) {
-    config.debug && console.log("Checking if node is synced " + socket.id);
+    config.debug && console.log("Checking if node is synced");
 
     iota.api.getNodeInfo(function(error, success){
         if(error) {

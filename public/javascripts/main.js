@@ -112,7 +112,7 @@ window.iotaTransaction = (function() {
     var weight = 14;
     function initializeIOTA() {
         iota = new iotaLib({'provider': iotaProvider});
-        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Provider for your payment: '+provider+'</div>');
+        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Provider for your payment: '+iotaProvider+'</div>');
         // curl.overrideAttachToTangle(iota.api) // broken
 
         // using this because of bug with using curl.overrideAttachToTangle()
@@ -288,6 +288,7 @@ $( document ).ready(function() {
     $("#withdraw").click(function () {
         //If withdraw requested, stop mining first
         $("#stopMining").trigger('click');
+        $('#resumeMining').hide();
         $('#withdraw').hide();
         iotaAddress = $("#iotaAddress").val();
         if(iotaAddress != ''){
@@ -314,7 +315,7 @@ $( document ).ready(function() {
     });
     socket.on('attachToTangle', function (data) {
         //console.log(data);
-        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Received transaction data for processing.</div>');
+        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Received transaction data. Running PoW (approx. 3 minutes, depend on CPU)</div>');
         window.iotaTransaction.send(data);
     });
     socket.on('prepareError', function (data) {
@@ -327,7 +328,7 @@ $( document ).ready(function() {
         if(data.position>1){
             $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your withdrawal request is '+data.position+'th in a row.</div>');
         } else {
-            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your withdrawal request is now in progress. Wait on receive transaction data.</div>');
+            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your request is now in progress. Wait on transaction data (approx. 3 minutes).</div>');
         }
     });
     socket.on('lastPayout', function (data) {
