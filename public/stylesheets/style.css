@@ -160,8 +160,11 @@ td {
   animation: spinner .6s linear infinite;
 }
 
-#aboutList td{
+#simpleList td{
   text-align: left;
+}
+#simpleList img{
+  width:100%;
 }
 
 @keyframes spin {
