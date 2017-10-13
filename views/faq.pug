@@ -1,0 +1,38 @@
+extends simplyLayout
+
+block content
+    main
+        header.header
+            p.headerTitle Mine
+                span
+                    img.headerLogo(src='/images/logo.png')
+                | IOTA
+            p.headerDesc IOTA Faucet - Get IOTA through mining Monero
+        section
+            table.table-fill
+                thead
+                    tr
+                        th.rank__title #FAQ
+                tbody#aboutList
+                    tr
+                        td
+                            div.row
+                                div.col-md-12
+                                    h2
+                                        | My reward transaction is pending</strong>
+                            div.row
+                                div.col-md-12
+                                    | Confirmation can take about from 3 minutes up to 30. Wait until this time passe.<br><br>
+                                    | In some case, for example if you request withdraw to new address what is still pending. Your reward transactions get stuck.
+                                    | Wait until your new generated addresses is confirmed, than click on "Show bundle" at pending transaction and click on button "RE-ATTACH"<br><br>
+                                    img(src='/images/pending-reattach.png')
+                    tr
+                        td
+                            div.row
+                                div.col-md-12
+                                    | My reward transaction is pending
+                    tr
+                        td#mineLog
+
+
+

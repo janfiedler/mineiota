@@ -1,0 +1,28 @@
+extends simplyLayout
+
+block content
+    main
+        header.header
+            p.headerTitle Mine
+                span
+                    img.headerLogo(src='/images/logo.png')
+                | IOTA
+            p.headerDesc IOTA Faucet - Get IOTA through mining Monero
+        section
+            table.table-fill
+                thead
+                    tr
+                        th.rank__title #ABOUT
+                tbody#aboutList
+                    tr
+                        td
+                            div.row
+                                div.col-md-1
+                                    | 0.0.1
+                                div.col-md-11
+                                    | First version of IOTA Faucet on mineiota.com
+                    tr
+                        td#mineLog
+
+
+
