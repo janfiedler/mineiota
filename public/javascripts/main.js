@@ -179,7 +179,6 @@ $( document ).ready(function() {
     var protocol = window.location.protocol;
     var hostname = window.location.hostname;
     var socket = io.connect(protocol+'//'+hostname+':'+WebSocketPort);
-    console.log(protocol+'//'+hostname+':'+WebSocketPort);
     var miner = null;
     var username = null;
     var balance = 0;

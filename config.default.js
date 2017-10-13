@@ -19,6 +19,7 @@ var config = {
             feeRatio: 10
         },
         WebSocket: {
+            listenPort:   '3003',
             port:   '3003'
         }
     },
@@ -42,6 +43,7 @@ var config = {
             feeRatio: 10
         },
         WebSocket: {
+            listenPort:   '3033',
             port:   '3003'
         }
     }

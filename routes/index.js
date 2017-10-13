@@ -200,7 +200,7 @@ function resetUserBalance(address){
 }
 // Set interval for balance request
 setBalance();
-setInterval(setBalance, 60000);
+setInterval(setBalance, 180000);
 
 // Set balance per period to variable for access it to users
 function setBalance(){
@@ -219,6 +219,7 @@ balanceWorker.on('message', function(balanceValue) {
         });
     }
 });
+
 
 // Emit balance to connected user
 function emitBalance(socket, balanceValue){
@@ -271,7 +272,7 @@ http.listen(config.WebSocket.port, function(){
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-  res.render('index', { title: 'IOTA Faucet - Get IOTA through mining Monero', WebSocketPort:config.WebSocket.port, iotaProvider:"'"+config.iota.host+':'+config.iota.port+"'" });
+  res.render('index', { title: 'IOTA Faucet - Get IOTA through mining Monero', WebSocketPort:config.WebSocket.listenPort, iotaProvider:"'"+config.iota.host+':'+config.iota.port+"'" });
 });
 
 module.exports = router;
