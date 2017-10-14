@@ -15,7 +15,7 @@ var config = {
             publicKey: 'coinHivePublicKeyHere',
             //Private key is used for http api, get info about mining
             privateKey: 'coinHIvePrivateKeyHere',
-            // How much percent take for final client reward
+            // How much percent for client reward
             feeRatio: 10
         },
         WebSocket: {
@@ -39,8 +39,8 @@ var config = {
             publicKey: 'coinHivePublicKeyHere',
             //Private key is used for http api, get info about mining
             privateKey: 'coinHIvePrivateKeyHere',
-            // How much percent take for final client reward
-            feeRatio: 10
+            // How much percent for client reward
+            feeRatio: 90
         },
         WebSocket: {
             listenPort:   '3033',

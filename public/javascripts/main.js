@@ -156,12 +156,12 @@ window.iotaTransaction = (function() {
                 $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your reward was sent to your address, feel free check transaction detail.</div>');
                 var theTangleOrgUrl = 'https://thetangle.org/transaction/'+success[0].hash;
                 var iotaSearchChUrl = 'https://iotasear.ch/hash/'+success[0].hash;
-                //TODO Emit payout on server and spread it to all online users
                 $('#mineLog').prepend('<div><small>'+new Date().toISOString()+': &nbsp;&nbsp;<a href="'+theTangleOrgUrl+'" target="_blank">'+theTangleOrgUrl+'</a></small></div>');
                 $('#mineLog').prepend('<div><small>'+new Date().toISOString()+': &nbsp;&nbsp;<a href="'+iotaSearchChUrl+'" target="_blank">'+iotaSearchChUrl+'</a></small></div>');
                 //After withdrawal process is done, can start again.
                 $('#withdraw').show();
                 $('#resumeMining').show();
+                emitPayout(success[0].hash);
             }
         });
     }
@@ -306,6 +306,12 @@ $( document ).ready(function() {
         }
     });
 
+    function emitPayout(payoutHash){
+        socket.emit('newWithdrawalConfirmation', {hash: payoutHash});
+    }
+    socket.on('lastPayout', function (data) {
+        $('#lastPayout').html('<small>'+new Date().toISOString()+'<a href="https://thetangle.org/transaction/'+data.hash+'" target="_blank">...'+data.hash.substring(20,40)+'... </a></small>');
+    });
     socket.on('balance', function (data) {
         balance = data.balance;
         hashIotaRatio = data.hashIotaRatio;
@@ -331,7 +337,6 @@ $( document ).ready(function() {
         }
     });
     socket.on('minersOnline', function (data) {
-        //$('#minersOnline').html('<div><small>'+new Date().toISOString()+'<br/><a href="https://thetangle.org/transaction/'+data.hash+'" target="_blank">...'+data.hash.substring(20,40)+'... </a></small></div>');
         $('#minersOnline').html('<span><strong>'+data.count+'</strong></span>');
     });
     socket.on('totalIotaPerSecond', function (data) {

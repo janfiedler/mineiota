@@ -62,7 +62,7 @@ setInterval(function () {
         sendQueuePosition();
     } else {
         config.debug && console.log('Miners online: '+sockets.length);
-        config.debug && console.log(funqueue.length + ' is in queue List: '+ JSON.stringify(funqueue));
+        config.debug && console.log(funqueue.length + ' is in queue');
     }
 }, 10000);
 
@@ -120,8 +120,8 @@ io.on('connection', function (socket) {
             fn({done:0});
         }
     });
-    //When user set address check if is valid format
-    socket.on('spreadPayout', function (data) {
+    //When user complete withdrawal, send last payout to all clients
+    socket.on('newWithdrawalConfirmation', function (data) {
         if(sockets != undefined ) {
             sockets.forEach(function (socketSingle){
                 emitBalance(socket, balance);

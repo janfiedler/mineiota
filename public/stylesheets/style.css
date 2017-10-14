@@ -119,6 +119,7 @@ td {
   margin: 5px;
 }
 .infoZone{
+  width:100%;
   text-align: right;
 }
 #mineStats, #mySpinner, #resumeMining{
