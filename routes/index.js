@@ -214,7 +214,7 @@ function setBalance(){
 balanceWorker.on('message', function(balanceValue) {
     // Receive results from child process
     config.debug && console.log("Faucet balance: " + balanceValue);
-    if(balanceValue.isInteger()){
+    if(Number.isInteger(balanceValue)){
         balance = balanceValue;
     } else {
         balance = 0;
