@@ -175,7 +175,7 @@ function prepareLocalTransfers(socket, address, value){
         'value': parseInt(value),
         'message': "MINEIOTADOTCOM"
     }];
-    config.debug && console.time('Transfer worker started');
+    config.debug && console('Transfer worker started');
     config.debug && console.time('trytes-time');
     // Worker for prepare TRYTES transfer
     var transferWorker = cp.fork('workers/transfer.js');
@@ -241,7 +241,7 @@ function setBalance(){
         balanceWorker.kill();
     });
     balanceWorker.on('close', function () {
-        config.debug && console.log('closing balance worker');
+        config.debug && console.log('Closing balance worker');
         config.debug && console.timeEnd('balance-time');
     });
 }
