@@ -65,6 +65,7 @@ setInterval(function () {
         // Send to waiting sockets in queue their position
         sendQueuePosition();
     } else {
+        config.debug && console.log('Miners online: '+sockets.length);
         config.debug && console.log(funqueue.length + ' is in queue List: '+ JSON.stringify(funqueue));
     }
 }, 10000);
