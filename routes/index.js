@@ -23,10 +23,6 @@ var queueSockets = [];
 var minersOnline = 1;
 
 var cp = require('child_process');
-// Worker for get IOTA balance in interval
-var balanceWorker = cp.fork('workers/balance.js');
-// Worker for prepare TRYTES transfer
-var transferWorker = cp.fork('workers/transfer.js');
 // Create IOTA instance with host and port as provider
 var iota = new IOTA({
     'host': config.iota.host,
@@ -179,6 +175,10 @@ function prepareLocalTransfers(socket, address, value){
         'value': parseInt(value),
         'message': "MINEIOTADOTCOM"
     }];
+
+    // Worker for prepare TRYTES transfer
+    var transferWorker = cp.fork('workers/transfer.js');
+
     transferWorker.send(transfer);
 
     transferWorker.on('message', function(result) {
@@ -197,6 +197,10 @@ function prepareLocalTransfers(socket, address, value){
             // We are done, next in queue can go
             withdrawalInProgress = false;
         }
+        transferWorker.kill();
+    });
+    transferWorker.on('close', function () {
+        config.debug && console.log('closing transfer worker');
     });
 }
 function resetUserBalance(address){
@@ -209,28 +213,35 @@ function resetUserBalance(address){
 }
 // Set interval for balance request
 setBalance();
-setInterval(setBalance, 300000);
+setInterval(setBalance, 150000);
 
 // Set balance per period to variable for access it to users
 function setBalance(){
+    // Worker for get IOTA balance in interval
+    var balanceWorker = cp.fork('workers/balance.js');
     // Send child process work to get IOTA balance
     balanceWorker.send('');
+
+    balanceWorker.on('message', function(balanceValue) {
+        // Receive results from child process
+        config.debug && console.log("Faucet balance: " + balanceValue);
+        if(Number.isInteger(balanceValue)){
+            balance = balanceValue;
+        }
+
+        // Emit new balance to all connected users
+        if(sockets != undefined ) {
+            sockets.forEach(function (socket){
+                emitBalance(socket, balance);
+            });
+        }
+        balanceWorker.kill();
+    });
+    balanceWorker.on('close', function () {
+        config.debug && console.log('closing balance worker:');
+    });
+
 }
-
-balanceWorker.on('message', function(balanceValue) {
-    // Receive results from child process
-    config.debug && console.log("Faucet balance: " + balanceValue);
-    if(Number.isInteger(balanceValue)){
-        balance = balanceValue;
-    }
-
-    // Emit new balance to all connected users
-    if(sockets != undefined ) {
-        sockets.forEach(function (socket){
-            emitBalance(socket, balance);
-        });
-    }
-});
 
 function emitMinersOnline(){
     if(sockets != undefined ) {
