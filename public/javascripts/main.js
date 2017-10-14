@@ -331,8 +331,10 @@ $( document ).ready(function() {
         }
     });
     socket.on('minersOnline', function (data) {
-        //console.log(data);
         //$('#minersOnline').html('<div><small>'+new Date().toISOString()+'<br/><a href="https://thetangle.org/transaction/'+data.hash+'" target="_blank">...'+data.hash.substring(20,40)+'... </a></small></div>');
-        $('#minersOnline').html('<div><strong>'+data.count+'</strong></div>');
+        $('#minersOnline').html('<span><strong>'+data.count+'</strong></span>');
+    });
+    socket.on('totalIotaPerSecond', function (data) {
+        $('#totalSpeed').html('<span><strong>'+data.count+'</strong></span>');
     });
 });

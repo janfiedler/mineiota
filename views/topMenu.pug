@@ -1,6 +1,6 @@
 nav.navbar.navbar-expand-lg.navbar-light.bg-light
     a.navbar-brand(href='/')
-        | IOTA Faucet 0.0.2
+        | IOTA Faucet 0.0.3
     button.navbar-toggler(type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation")
         span.navbar-toggler-icon
     div.collapse.navbar-collapse#navbarSupportedContent
@@ -16,5 +16,10 @@ nav.navbar.navbar-expand-lg.navbar-light.bg-light
             li.nav-item
                 a.nav-link.disabled(href="https://github.com/janfiedler/mineiota/",target="_blank") GitHub
         div.navbar-text.infoZone
-            | miners online:&nbsp;
-            span#minersOnline
+            div
+                | miners online:&nbsp;
+                span#minersOnline
+            div
+                | total speed:&nbsp;
+                span#totalSpeed
+                | &nbsp;iota/s

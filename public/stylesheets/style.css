@@ -120,7 +120,6 @@ td {
 }
 .infoZone{
   text-align: right;
-  display: inherit;
 }
 #mineStats, #mySpinner, #resumeMining{
   display: none;

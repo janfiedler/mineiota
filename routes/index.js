@@ -14,6 +14,7 @@ var xmrToBtc = 0;
 var miotaToBtc = 0;
 var payoutPer1MHashes = 0;
 var hashIotaRatio = 0;
+var totalIotaPerSecond = 0;
 var final = 0;
 var withdrawalInProgress = false;
 var funqueue = [];
@@ -43,6 +44,8 @@ setInterval(function () {
     getPayoutPer1MHashes();
     getXmrToBtc();
     getIotaToBtc();
+    // Emit actual iota/s speed
+    getTotalIotaPerSecond();
 }, 60000);
 
 
@@ -79,8 +82,10 @@ io.on('connection', function (socket) {
     sockets.push(socket);
     // Get number of online miners
     emitMinersOnline();
-    // Emit actual balance
+    // Emit actual balance to new client
     emitBalance(socket, balance);
+    // Emit actual total mining speed to new cliet
+    getTotalIotaPerSecond();
 
     // On disconnect remove socket from array sockets
     socket.on('disconnect', function(data){
@@ -235,6 +240,13 @@ function emitMinersOnline(){
         });
     }
 }
+function emitTotalIotaPerSecond(count){
+    if(sockets != undefined ) {
+        sockets.forEach(function (socketSingle){
+            socketSingle.emit('totalIotaPerSecond', {count: count});
+        });
+    }
+}
 // Emit balance to connected user
 function emitBalance(socket, balanceValue){
     socket.emit('balance', { balance: balanceValue, hashIotaRatio: getHashIotaRatio() });
@@ -256,6 +268,16 @@ function getPayoutPer1MHashes(){
             var info = JSON.parse(body);
             payoutPer1MHashes = info.payoutPer1MHashes;
             config.debug && console.log("payoutPer1MHashes: " + payoutPer1MHashes);
+        }
+    });
+}
+function getTotalIotaPerSecond(){
+    request.get({url: "https://api.coinhive.com/stats/site", qs: {"secret": config.coinhive.privateKey}}, function(error, response, body) {
+        if (!error && response.statusCode == 200) {
+            var info = JSON.parse(body);
+            totalIotaPerSecond = (info.hashesPerSecond*getHashIotaRatio()).toFixed(2);
+            config.debug && console.log("totalIotaPerSecond: " + totalIotaPerSecond);
+            emitTotalIotaPerSecond(totalIotaPerSecond);
         }
     });
 }

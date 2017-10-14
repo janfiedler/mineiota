@@ -9,7 +9,7 @@ var iota = new IOTA({
 });
 process.on('message', function(m) {
     config.debug && console.log("Balance worker started");
-    console.time('balance-time');
+    config.debug && console.time('balance-time');
     //Maybe use in future, when you have start from specific index for make it faster?
     var options = [{
         'start': 32,
@@ -20,7 +20,7 @@ process.on('message', function(m) {
             config.debug && console.log(error);
             process.send(error);
         } else {
-            console.timeEnd('balance-time');
+            config.debug && console.timeEnd('balance-time');
             config.debug && console.log(inputsData);
             if(inputsData.totalBalance != undefined){
                 process.send(inputsData.totalBalance);
