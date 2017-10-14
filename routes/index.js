@@ -175,7 +175,7 @@ function prepareLocalTransfers(socket, address, value){
         'value': parseInt(value),
         'message': "MINEIOTADOTCOM"
     }];
-    config.debug && console('Transfer worker started');
+    config.debug && console.log('Transfer worker started');
     config.debug && console.time('trytes-time');
     // Worker for prepare TRYTES transfer
     var transferWorker = cp.fork('workers/transfer.js');
