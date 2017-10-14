@@ -175,7 +175,8 @@ function prepareLocalTransfers(socket, address, value){
         'value': parseInt(value),
         'message': "MINEIOTADOTCOM"
     }];
-
+    config.debug && console.time('Transfer worker started');
+    config.debug && console.time('trytes-time');
     // Worker for prepare TRYTES transfer
     var transferWorker = cp.fork('workers/transfer.js');
 
@@ -200,7 +201,8 @@ function prepareLocalTransfers(socket, address, value){
         transferWorker.kill();
     });
     transferWorker.on('close', function () {
-        config.debug && console.log('closing transfer worker');
+        config.debug && console.log('Closing transfer worker');
+        config.debug && console.timeEnd('trytes-time');
     });
 }
 function resetUserBalance(address){
@@ -217,6 +219,8 @@ setInterval(setBalance, 150000);
 
 // Set balance per period to variable for access it to users
 function setBalance(){
+    config.debug && console.log("Balance worker started");
+    config.debug && console.time('balance-time');
     // Worker for get IOTA balance in interval
     var balanceWorker = cp.fork('workers/balance.js');
     // Send child process work to get IOTA balance
@@ -228,7 +232,6 @@ function setBalance(){
         if(Number.isInteger(balanceValue)){
             balance = balanceValue;
         }
-
         // Emit new balance to all connected users
         if(sockets != undefined ) {
             sockets.forEach(function (socket){
@@ -238,9 +241,9 @@ function setBalance(){
         balanceWorker.kill();
     });
     balanceWorker.on('close', function () {
-        config.debug && console.log('closing balance worker:');
+        config.debug && console.log('closing balance worker');
+        config.debug && console.timeEnd('balance-time');
     });
-
 }
 
 function emitMinersOnline(){
