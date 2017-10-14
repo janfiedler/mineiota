@@ -62,7 +62,7 @@ setInterval(function () {
         sendQueuePosition();
     } else {
         config.debug && console.log('Miners online: '+sockets.length);
-        config.debug && console.log(funqueue.length + ' is in queue');
+        config.debug && console.log('Transactions in queue: '+funqueue.length);
     }
 }, 10000);
 

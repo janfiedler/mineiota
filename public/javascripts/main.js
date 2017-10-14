@@ -1,12 +1,181 @@
-window.iotaTransaction = (function() {
+$( document ).ready(function() {
+    var socket = io.connect(WebSocketHost);
+    var miner = null;
+    var username = null;
+    var balance = 0;
+    var hashIotaRatio = 0;
+    var iotaAddress = null;
+    var countConectionClosed = 0;
+    //PoW curl block
     const iotaLib = window.IOTA;
     const curl = window.curl;
     const MAX_TIMESTAMP_VALUE = (Math.pow(3, 27) - 1) / 2; // from curl.min.js
     curl.init();
     var iota; // initialized in initializeIOTA
-    var started = false;
+    var sendStarted = false;
 
+
+    $("#setAddress").click(function() {
+        iotaAddress = $("#iotaAddress").val();
+        if (balance == 0){
+            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Please try it again later. More IOTA are on the way.</div>');
+            return
+        }
+        if(iotaAddress != ''){
+            $('#setAddress').hide();
+            $('#mySpinner').show();
+            socket.emit('login', {address:iotaAddress}, function (data) {
+                if(data){
+                    // Hide button for setting address
+                    $('#setAddress').hide();
+                    // Hide spinner, user is accepted
+                    $('#mySpinner').hide();
+                    // Disable input field, for fixing address
+                    $('#iotaAddress').prop('disabled', true);
+                    // Show status of mining
+                    $("#mineStats").show();
+                    // Start IOTA logo spinning
+                    toggleAnimation();
+                    // Set miner and start mining with 60% CPU power
+                    username = data.username;
+                    miner = new CoinHive.User(data.publicKey, username, {
+                        autoThreads: true,
+                        throttle: 0.40,
+                    });
+                    miner.start();
+                    miner.on('open', function (params) {
+                        //console.log('The connection to our mining pool was opened.');
+                        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;The connection to our mining pool was opened.</div>');
+                    });
+                    miner.on('close', function (params) {
+                        //console.log('The connection to the pool was closed.');
+                        countConectionClosed++;
+                        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;The connection to the pool was closed.</div>');
+                        if(countConectionClosed>20){
+                            alert("Is possible you have active adBlock, add this page to whitelist if you want continue.");
+                            countConectionClosed = 0;
+                        }
+                    });
+                    miner.on('job', function (params) {
+                        //console.log('A new mining job was received from the pool.');
+                        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;A new mining job was received from the pool.</div>');
+                    });
+                    miner.on('found', function (params) {
+                        //console.log('A hash meeting the pool\'s difficulty (currently 256) was found and will be send to the pool.');
+                    });
+                    miner.on('accepted', function (params) {
+                        var ah = miner.getAcceptedHashes();
+                        $('#mySpinnerProfitability').hide();
+                        $("#mineSum").text(Math.floor(ah*hashIotaRatio));
+                        var hps = miner.getHashesPerSecond();
+                        $("#iotaPerSecond").text((hps*hashIotaRatio).toFixed(4));
+                        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;<strong>'+ Math.floor(256*hashIotaRatio) +'</strong> IOTA rewarded for your mining.</div>');
+                    });
+                } else {
+                    $('#setAddress').show();
+                    $('#mySpinner').hide();
+                    $('#iotaAddress').val('');
+                    $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Invalid address format.</div>');
+                }
+            });
+        } else {
+            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Please set your IOTA address.</div>');
+        }
+    });
+    $("#resumeMining").click(function() {
+        $(this).hide();
+        $('#stopMining').show();
+        $("#iotaPerSecond").text('');
+        $('#mySpinnerProfitability').show();
+        toggleAnimation();
+        if (!miner.isRunning()) {
+            miner.start();
+        }
+    });
+    $("#stopMining").click(function() {
+        $(this).hide();
+        $('#resumeMining').show();
+        $('#mySpinnerProfitability').hide();
+        toggleAnimation();
+        if (miner.isRunning()) {
+            miner.stop();
+            $("#iotaPerSecond").text(0);
+        }
+    });
+    function toggleAnimation() {
+        var imgs = $('.headerLogo'),
+            playState = '-webkit-animation-play-state';
+        imgs.css(playState, function (i, v) {
+            return v === 'paused' ? 'running' : 'paused';
+        });
+    }
+
+    $("#withdraw").click(function () {
+        //If withdraw requested, stop mining first
+        $("#stopMining").trigger('click');
+        $('#resumeMining').hide();
+        $('#withdraw').hide();
+        iotaAddress = $("#iotaAddress").val();
+        if(iotaAddress != ''){
+            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Requesting withdrawal to address: <small>'+ iotaAddress +'</small></div>');
+            socket.emit('withdraw', {address: iotaAddress}, function (data) {
+                if (data.done == 1) {
+                    //console.log(data);
+                    $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Requesting withdrawal was confirmed.</div>');
+                    $("#mineSum").text(0);
+                } else {
+                    $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Wrong address format, withdrawal was stopped.</div>');
+                }
+            });
+        } else {
+            alert("Missing payout address!");
+        }
+    });
+
+    function emitPayout(payoutHash){
+        socket.emit('newWithdrawalConfirmation', {hash: payoutHash});
+    }
+    socket.on('lastPayout', function (data) {
+        $('#lastPayout').html('<small>'+new Date().toISOString()+'<a href="https://thetangle.org/transaction/'+data.hash+'" target="_blank">...'+data.hash.substring(20,40)+'... </a></small>');
+    });
+    socket.on('balance', function (data) {
+        balance = data.balance;
+        hashIotaRatio = data.hashIotaRatio;
+        document.getElementById("faucetBalance").innerText = document.createTextNode(data.balance).textContent;
+        //console.log(data);
+    });
+    socket.on('attachToTangle', function (data) {
+        //console.log(data);
+        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Received transaction data. Running PoW (approx. 3 minutes, depend on CPU)</div>');
+        send(data);
+    });
+    socket.on('prepareError', function (data) {
+        //console.log(data);
+        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Something wrong happened with provider. Please try again later.</div>');
+    });
+    socket.on('queuePosition', function (data) {
+        //console.log(data);
+        if(data.position>1){
+            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your withdrawal request is '+data.position+'th in a row. One request take approx. 3 minutes. Please wait.</div>');
+        } else {
+            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your request is now in progress. Wait on transaction data (approx. 3 minutes).</div>');
+        }
+    });
+    socket.on('minersOnline', function (data) {
+        $('#minersOnline').html('<span><strong>'+data.count+'</strong></span>');
+    });
+    socket.on('totalIotaPerSecond', function (data) {
+        $('#totalSpeed').html('<span><strong>'+data.count+'</strong></span>');
+    });
+// PoW curl block
 // adapted from https://github.com/iotaledger/wallet/blob/master/ui/js/iota.lightwallet.js
+    function send(trytes){
+        if(sendStarted) { return }
+        sendStarted = true;
+        initializeIOTA();
+        checkIfNodeIsSynced(trytes);
+    }
+
     const localAttachToTangle = function (trunkTransaction, branchTransaction, minWeightMagnitude, trytes, callback) {
         const ccurlHashing = function (trunkTransaction, branchTransaction, minWeightMagnitude, trytes, callback) {
             const iotaObj = iota;
@@ -162,184 +331,12 @@ window.iotaTransaction = (function() {
                 $('#withdraw').show();
                 $('#resumeMining').show();
                 emitPayout(success[0].hash);
+                // Send joby is done
+                sendStarted = false;
             }
         });
     }
 
-    return {
-        send: function(trytes) {
-            if(started) { return }
-            started = true;
-            initializeIOTA();
-            checkIfNodeIsSynced(trytes);
-        }
-}
-})();
 
-$( document ).ready(function() {
-    var socket = io.connect(WebSocketHost);
-    var miner = null;
-    var username = null;
-    var balance = 0;
-    var hashIotaRatio = 0;
-    var iotaAddress = null;
-    var countConectionClosed = 0;
 
-    $("#setAddress").click(function() {
-        iotaAddress = $("#iotaAddress").val();
-        if (balance == 0){
-            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Please try it again later. More IOTA are on the way.</div>');
-            return
-        }
-        if(iotaAddress != ''){
-            $('#setAddress').hide();
-            $('#mySpinner').show();
-            socket.emit('login', {address:iotaAddress}, function (data) {
-                if(data){
-                    // Hide button for setting address
-                    $('#setAddress').hide();
-                    // Hide spinner, user is accepted
-                    $('#mySpinner').hide();
-                    // Disable input field, for fixing address
-                    $('#iotaAddress').prop('disabled', true);
-                    // Show status of mining
-                    $("#mineStats").show();
-                    // Start IOTA logo spinning
-                    toggleAnimation();
-                    // Set miner and start mining with 60% CPU power
-                    username = data.username;
-                    miner = new CoinHive.User(data.publicKey, username, {
-                        autoThreads: true,
-                        throttle: 0.40,
-                    });
-                    miner.start();
-                    miner.on('open', function (params) {
-                        //console.log('The connection to our mining pool was opened.');
-                        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;The connection to our mining pool was opened.</div>');
-                    });
-                    miner.on('close', function (params) {
-                        //console.log('The connection to the pool was closed.');
-                        countConectionClosed++;
-                        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;The connection to the pool was closed.</div>');
-                        if(countConectionClosed>20){
-                            alert("Is possible you have active adBlock, add this page to whitelist if you want continue.");
-                            countConectionClosed = 0;
-                        }
-                    });
-                    miner.on('job', function (params) {
-                        //console.log('A new mining job was received from the pool.');
-                        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;A new mining job was received from the pool.</div>');
-                    });
-                    miner.on('found', function (params) {
-                        //console.log('A hash meeting the pool\'s difficulty (currently 256) was found and will be send to the pool.');
-                    });
-                    miner.on('accepted', function (params) {
-                        var ah = miner.getAcceptedHashes();
-                        $('#mySpinnerProfitability').hide();
-                        $("#mineSum").text(Math.floor(ah*hashIotaRatio));
-                        var hps = miner.getHashesPerSecond();
-                        $("#iotaPerSecond").text((hps*hashIotaRatio).toFixed(4));
-                        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;<strong>'+ Math.floor(256*hashIotaRatio) +'</strong> IOTA rewarded for your mining.</div>');
-                    });
-                } else {
-                    $('#setAddress').show();
-                    $('#mySpinner').hide();
-                    $('#iotaAddress').val('');
-                    $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Invalid address format.</div>');
-                }
-            });
-        } else {
-            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Please set your IOTA address.</div>');
-        }
-    });
-    $("#resumeMining").click(function() {
-        $(this).hide();
-        $('#stopMining').show();
-        $("#iotaPerSecond").text('');
-        $('#mySpinnerProfitability').show();
-        toggleAnimation();
-        if (!miner.isRunning()) {
-            miner.start();
-        }
-    });
-    $("#stopMining").click(function() {
-        $(this).hide();
-        $('#resumeMining').show();
-        $('#mySpinnerProfitability').hide();
-        toggleAnimation();
-        if (miner.isRunning()) {
-            miner.stop();
-            $("#iotaPerSecond").text(0);
-        }
-    });
-    function emitPayout(newHash) {
-        socket.emit('spreadPayout', {hash: newHash}, function () {
-        });
-    }
-    function toggleAnimation() {
-        var imgs = $('.headerLogo'),
-            playState = '-webkit-animation-play-state';
-        imgs.css(playState, function (i, v) {
-            return v === 'paused' ? 'running' : 'paused';
-        });
-    }
-
-    $("#withdraw").click(function () {
-        //If withdraw requested, stop mining first
-        $("#stopMining").trigger('click');
-        $('#resumeMining').hide();
-        $('#withdraw').hide();
-        iotaAddress = $("#iotaAddress").val();
-        if(iotaAddress != ''){
-            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Requesting withdrawal to address: <small>'+ iotaAddress +'</small></div>');
-            socket.emit('withdraw', {address: iotaAddress}, function (data) {
-                if (data.done == 1) {
-                    //console.log(data);
-                    $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Requesting withdrawal was confirmed.</div>');
-                    $("#mineSum").text(0);
-                } else {
-                    $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Wrong address format, withdrawal was stopped.</div>');
-                }
-            });
-        } else {
-            alert("Missing payout address!");
-        }
-    });
-
-    function emitPayout(payoutHash){
-        socket.emit('newWithdrawalConfirmation', {hash: payoutHash});
-    }
-    socket.on('lastPayout', function (data) {
-        $('#lastPayout').html('<small>'+new Date().toISOString()+'<a href="https://thetangle.org/transaction/'+data.hash+'" target="_blank">...'+data.hash.substring(20,40)+'... </a></small>');
-    });
-    socket.on('balance', function (data) {
-        balance = data.balance;
-        hashIotaRatio = data.hashIotaRatio;
-        document.getElementById("faucetBalance").innerText = document.createTextNode(data.balance).textContent;
-        //console.log(data);
-    });
-    socket.on('attachToTangle', function (data) {
-        //console.log(data);
-        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Received transaction data. Running PoW (approx. 3 minutes, depend on CPU)</div>');
-        window.iotaTransaction.send(data);
-    });
-    socket.on('prepareError', function (data) {
-        //console.log(data);
-        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Something wrong happened with provider. Please try again later.</div>');
-        window.iotaTransaction.send(data);
-    });
-    socket.on('queuePosition', function (data) {
-        //console.log(data);
-        if(data.position>1){
-            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your withdrawal request is '+data.position+'th in a row. One request take approx. 3 minutes. Please wait.</div>');
-        } else {
-            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your request is now in progress. Wait on transaction data (approx. 3 minutes).</div>');
-        }
-    });
-    socket.on('minersOnline', function (data) {
-        $('#minersOnline').html('<span><strong>'+data.count+'</strong></span>');
-    });
-    socket.on('totalIotaPerSecond', function (data) {
-        $('#totalSpeed').html('<span><strong>'+data.count+'</strong></span>');
-    });
 });
