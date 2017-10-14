@@ -34,8 +34,6 @@ $( document ).ready(function() {
                     $('#iotaAddress').prop('disabled', true);
                     // Show status of mining
                     $("#mineStats").show();
-                    // Start IOTA logo spinning
-                    toggleAnimation();
                     // Set miner and start mining with 60% CPU power
                     username = data.username;
                     miner = new CoinHive.User(data.publicKey, username, {
@@ -87,7 +85,6 @@ $( document ).ready(function() {
         $('#stopMining').show();
         $("#iotaPerSecond").text('');
         $('#mySpinnerProfitability').show();
-        toggleAnimation();
         if (!miner.isRunning()) {
             miner.start();
         }
@@ -96,20 +93,11 @@ $( document ).ready(function() {
         $(this).hide();
         $('#resumeMining').show();
         $('#mySpinnerProfitability').hide();
-        toggleAnimation();
         if (miner.isRunning()) {
             miner.stop();
             $("#iotaPerSecond").text(0);
         }
     });
-    function toggleAnimation() {
-        var imgs = $('.headerLogo'),
-            playState = '-webkit-animation-play-state';
-        imgs.css(playState, function (i, v) {
-            return v === 'paused' ? 'running' : 'paused';
-        });
-    }
-
     $("#withdraw").click(function () {
         //If withdraw requested, stop mining first
         $("#stopMining").trigger('click');
