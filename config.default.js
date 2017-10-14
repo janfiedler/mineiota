@@ -2,7 +2,7 @@ var config = {
     development: {
         debug: true,
         port: 3000,
-        url: 'http://yourwebsite.com',
+        url: 'http://127.0.0.1',
         // IOTA Provider details
         iota: {
             host:   'https://yournode.com',

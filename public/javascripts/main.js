@@ -177,9 +177,7 @@ window.iotaTransaction = (function() {
 })();
 
 $( document ).ready(function() {
-    var protocol = window.location.protocol;
-    var hostname = window.location.hostname;
-    var socket = io.connect(protocol+'//'+hostname+':'+WebSocketPort);
+    var socket = io.connect(WebSocketHost);
     var miner = null;
     var username = null;
     var balance = 0;
