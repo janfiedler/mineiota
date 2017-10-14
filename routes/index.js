@@ -69,7 +69,7 @@ setInterval(function () {
 function sendQueuePosition(){
     if(queueSockets != undefined ) {
         queueSockets.forEach(function (queueSocket){
-            config.debug && console.log(queueSocket+" is in queue " + queueIds.indexOf(queueSocket.id)+1);
+            config.debug && console.log(queueSocket.id+" is in queue " + queueIds.indexOf(queueSocket.id)+1);
             queueSocket.emit('queuePosition', {position: queueIds.indexOf(queueSocket.id)+1});
         });
     }

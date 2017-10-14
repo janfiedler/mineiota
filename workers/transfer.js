@@ -8,10 +8,12 @@ var iota = new IOTA({
     'port': config.iota.port
 });
 process.on('message', function(transfer) {
+    console.time('trytes-time');
     iota.api.prepareTransfers(config.iota.seed, transfer, function(error, success){
         if (error) {
             process.send({status:"error",result:error});
         } else {
+            console.timeEnd('trytes-time');
             process.send({status:"success",result:success});
         }
     });
