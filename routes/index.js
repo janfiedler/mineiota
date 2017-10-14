@@ -65,9 +65,9 @@ setInterval(function () {
         // Send to waiting sockets in queue their position
         sendQueuePosition();
     } else {
-
+        config.debug && console.log(funqueue.length + 'is in queue');
     }
-}, 1000);
+}, 10000);
 
 function sendQueuePosition(){
     if(queueSockets != undefined ) {
