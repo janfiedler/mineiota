@@ -216,8 +216,6 @@ balanceWorker.on('message', function(balanceValue) {
     config.debug && console.log("Faucet balance: " + balanceValue);
     if(Number.isInteger(balanceValue)){
         balance = balanceValue;
-    } else {
-        balance = 0;
     }
 
     // Emit new balance to all connected users
