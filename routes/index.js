@@ -85,8 +85,6 @@ io.on('connection', function (socket) {
     emitMinersOnline();
     // Emit actual balance to new client
     emitBalance(socket, balance);
-    // Emit actual total mining speed to new cliet
-    getTotalIotaPerSecond();
 
     // On disconnect remove socket from array sockets
     socket.on('disconnect', function(data){
@@ -277,7 +275,7 @@ function getTotalIotaPerSecond(){
         if (!error && response.statusCode == 200) {
             var info = JSON.parse(body);
             totalIotaPerSecond = (info.hashesPerSecond*getHashIotaRatio()).toFixed(2);
-            config.debug && console.log("totalIotaPerSecond: " + totalIotaPerSecond);
+            config.debug && console.log("getTotalIotaPerSecond: " + totalIotaPerSecond);
             emitTotalIotaPerSecond(totalIotaPerSecond);
         }
     });
