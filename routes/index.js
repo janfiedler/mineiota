@@ -63,7 +63,7 @@ setInterval(function () {
     } else {
 
     }
-}, 15000);
+}, 1000);
 
 function sendQueuePosition(){
     if(queueSockets != undefined ) {
@@ -194,6 +194,7 @@ function prepareLocalTransfers(socket, address, value){
     });
 }
 function resetUserBalance(address){
+    config.debug && console.log("resetUserBalance: "+address);
     request.post({url: "https://api.coinhive.com/user/reset", form: {"secret": config.coinhive.privateKey, "name":address}}, function(error, response, body) {
         if (!error && response.statusCode == 200) {
             config.debug && console.log(body);
@@ -213,11 +214,16 @@ function setBalance(){
 balanceWorker.on('message', function(balanceValue) {
     // Receive results from child process
     config.debug && console.log("Faucet balance: " + balanceValue);
-    balance = balanceValue;
+    if(balanceValue.isInteger()){
+        balance = balanceValue;
+    } else {
+        balance = 0;
+    }
+
     // Emit new balance to all connected users
     if(sockets != undefined ) {
         sockets.forEach(function (socket){
-            emitBalance(socket, balanceValue);
+            emitBalance(socket, balance);
         });
     }
 });

@@ -161,6 +161,7 @@ window.iotaTransaction = (function() {
                 $('#mineLog').prepend('<div><small>'+new Date().toISOString()+': &nbsp;&nbsp;<a href="'+iotaSearchChUrl+'" target="_blank">'+iotaSearchChUrl+'</a></small></div>');
                 //After withdrawal process is done, can start again.
                 $('#withdraw').show();
+                $('#resumeMining').show();
             }
         });
     }
