@@ -19,6 +19,7 @@ var withdrawalInProgress = false;
 var funqueue = [];
 var queueIds = [];
 var queueSockets = [];
+var minersOnline = 1;
 
 var cp = require('child_process');
 // Worker for get IOTA balance in interval
@@ -73,10 +74,11 @@ function sendQueuePosition(){
         });
     }
 };
-
 io.on('connection', function (socket) {
     // Set new connection socket to array
     sockets.push(socket);
+    // Get number of online miners
+    emitMinersOnline();
     // Emit actual balance
     emitBalance(socket, balance);
 
@@ -88,7 +90,7 @@ io.on('connection', function (socket) {
         if(i != -1) {
             sockets.splice(i, 1);
         }
-        //console.log("Sockets after: " + sockets);
+        emitMinersOnline();
     });
 
     //When user set address check if is valid format
@@ -226,7 +228,13 @@ balanceWorker.on('message', function(balanceValue) {
     }
 });
 
-
+function emitMinersOnline(){
+    if(sockets != undefined ) {
+        sockets.forEach(function (socketSingle){
+            socketSingle.emit('minersOnline', {count: sockets.length});
+        });
+    }
+}
 // Emit balance to connected user
 function emitBalance(socket, balanceValue){
     socket.emit('balance', { balance: balanceValue, hashIotaRatio: getHashIotaRatio() });

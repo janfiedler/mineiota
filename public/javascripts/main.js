@@ -332,8 +332,9 @@ $( document ).ready(function() {
             $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your request is now in progress. Wait on transaction data (approx. 3 minutes).</div>');
         }
     });
-    socket.on('lastPayout', function (data) {
+    socket.on('minersOnline', function (data) {
         //console.log(data);
-        $('#lastPayout').html('<div><small>'+new Date().toISOString()+'<br/><a href="https://thetangle.org/transaction/'+data.hash+'" target="_blank">...'+data.hash.substring(20,40)+'... </a></small></div>');
+        //$('#minersOnline').html('<div><small>'+new Date().toISOString()+'<br/><a href="https://thetangle.org/transaction/'+data.hash+'" target="_blank">...'+data.hash.substring(20,40)+'... </a></small></div>');
+        $('#minersOnline').html('<div><strong>'+data.count+'</strong></div>');
     });
 });

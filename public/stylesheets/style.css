@@ -118,9 +118,9 @@ td {
 .buttons-group button {
   margin: 5px;
 }
-.zoneLastPayout{
+.infoZone{
   text-align: right;
-  height: 88px;
+  display: inherit;
 }
 #mineStats, #mySpinner, #resumeMining{
   display: none;
