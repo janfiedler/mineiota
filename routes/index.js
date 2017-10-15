@@ -136,6 +136,8 @@ function checkIfNodeIsSynced(socket, address) {
     iota.api.getNodeInfo(function(error, success){
         if(error) {
             config.debug && console.log("Error occurred while checking if node is synced");
+            config.debug && console.log(error);
+            socket.emit("prepareError", '');
             withdrawalInProgress = false;
             return false;
         }
