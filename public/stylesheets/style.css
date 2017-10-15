@@ -39,9 +39,12 @@ html {
 .headerTitle {
   font-family: 'Galada', cursive;
   font-size: 66px;
-  margin-top: 15px;
+  margin: 0px;
 }
-
+.warning {
+  color: #ff544f;
+  margin: 0px;
+}
 .headerDesc {
   font-size: 33px;
 }
