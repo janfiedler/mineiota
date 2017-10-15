@@ -14,7 +14,6 @@ process.on('message', function(transfer) {
         } else {
             var options = [{
                 'inputs': inputsData.inputs,
-                'address': config.iota.address,
                 'security': parseInt(2)
             }];
             iota.api.prepareTransfers(config.iota.seed, transfer, options, function(error, success){

@@ -217,7 +217,7 @@ function resetUserBalance(address){
 }
 // Set interval for balance request
 setBalance();
-setInterval(setBalance, 60000);
+setInterval(setBalance, 300000);
 
 // Set balance per period to variable for access it to users
 function setBalance(){
