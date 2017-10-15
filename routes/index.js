@@ -21,6 +21,8 @@ var funqueue = [];
 var queueIds = [];
 var queueSockets = [];
 var minersOnline = 1;
+// Important for speed, check api getInputs
+var keyIndexStart = config.iota.keyIndexStart;
 
 var cp = require('child_process');
 // Create IOTA instance with host and port as provider
@@ -182,6 +184,7 @@ function prepareLocalTransfers(socket, address, value){
     // Worker for prepare TRYTES transfer
     var transferWorker = cp.fork('workers/transfer.js');
 
+    transferWorker.send({keyIndex:keyIndexStart});
     transferWorker.send(transfer);
 
     transferWorker.on('message', function(result) {
@@ -192,6 +195,13 @@ function prepareLocalTransfers(socket, address, value){
             //Before send trytes to attach, reset user balance on coinhive.com
             resetUserBalance(address);
             socket.emit("attachToTangle", result.result);
+
+            //We store actual keyIndex for next faster search and transaction
+            if(typeof result.keyIndex !== 'undefined'){
+                keyIndexStart = result.keyIndex;
+                config.debug && console.log('Transfer: store actual keyIndex: '+result.keyIndex);
+            }
+
             // We are done, next in queue can go
             withdrawalInProgress = false;
         } else if (result.status == "error"){
@@ -217,7 +227,7 @@ function resetUserBalance(address){
 }
 // Set interval for balance request
 setBalance();
-setInterval(setBalance, 300000);
+setInterval(setBalance, 60000);
 
 // Set balance per period to variable for access it to users
 function setBalance(){
@@ -226,11 +236,17 @@ function setBalance(){
     // Worker for get IOTA balance in interval
     var balanceWorker = cp.fork('workers/balance.js');
     // Send child process work to get IOTA balance
-    balanceWorker.send('');
+    //We pass to worker keyIndex where start looking for funds
+    balanceWorker.send({keyIndexStart:keyIndexStart});
 
     balanceWorker.on('message', function(balanceResult) {
         // Receive results from child process
         config.debug && console.log(balanceResult);
+        if(typeof balanceResult.inputs[0] !== 'undefined'){
+            //We store actual keyIndex for next faster search and transaction
+            keyIndexStart = balanceResult.inputs[0].keyIndex;
+            config.debug && console.log('Balance: store actual keyIndex: '+balanceResult.inputs[0].keyIndex);
+        }
         config.debug && console.log("Faucet balance: " + balanceResult.totalBalance);
         if(Number.isInteger(balanceResult.totalBalance)){
             balance = balanceResult.totalBalance;

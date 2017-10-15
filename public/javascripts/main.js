@@ -144,9 +144,9 @@ $( document ).ready(function() {
     socket.on('queuePosition', function (data) {
         //console.log(data);
         if(data.position>1){
-            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your withdrawal request is '+data.position+'th in a row. One request take approx. 3 minutes. Please wait.</div>');
+            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your withdrawal request is '+data.position+'th in a row. One request take approx. 2 minutes. Please wait.</div>');
         } else {
-            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your request is now in progress. Wait on transaction data (approx. 3 minutes).</div>');
+            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your request is now in progress. Wait on transaction data (approx. 2 minutes).</div>');
         }
     });
     socket.on('minersOnline', function (data) {
