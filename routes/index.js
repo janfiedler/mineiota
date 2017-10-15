@@ -124,7 +124,6 @@ io.on('connection', function (socket) {
     socket.on('newWithdrawalConfirmation', function (data) {
         if(sockets != undefined ) {
             sockets.forEach(function (socketSingle){
-                emitBalance(socket, balance);
                 socketSingle.emit('lastPayout', {hash: data.hash});
             });
         }
