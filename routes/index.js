@@ -250,6 +250,8 @@ function setBalance(){
         config.debug && console.log("Faucet balance: " + balanceResult.totalBalance);
         if(Number.isInteger(balanceResult.totalBalance)){
             balance = balanceResult.totalBalance;
+        } else {
+            balance = "NODES are down, withdrawal do not work, please wait!"
         }
         // Emit new balance to all connected users
         if(sockets != undefined ) {
