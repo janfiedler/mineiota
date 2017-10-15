@@ -242,7 +242,7 @@ function setBalance(){
     balanceWorker.on('message', function(balanceResult) {
         // Receive results from child process
         config.debug && console.log(balanceResult);
-        if(typeof balanceResult.inputs[0] !== 'undefined'){
+        if(typeof balanceResult.inputs !== 'undefined'){
             //We store actual keyIndex for next faster search and transaction
             keyIndexStart = balanceResult.inputs[0].keyIndex;
             config.debug && console.log('Balance: store actual keyIndex: '+balanceResult.inputs[0].keyIndex);
