@@ -8,11 +8,23 @@ var iota = new IOTA({
     'port': config.iota.port
 });
 process.on('message', function(transfer) {
-    iota.api.prepareTransfers(config.iota.seed, transfer, function(error, success){
+    iota.api.getInputs(config.iota.seed, function(error, inputsData) {
         if (error) {
-            process.send({status:"error",result:error});
+            process.send(error);
         } else {
-            process.send({status:"success",result:success});
+            var options = [{
+                'inputs': inputsData.inputs,
+                'address': config.iota.address,
+                'security': parseInt(2)
+            }];
+            iota.api.prepareTransfers(config.iota.seed, transfer, options, function(error, success){
+                if (error) {
+                    process.send({status:"error",result:error});
+                } else {
+                    process.send({status:"success",result:success});
+                }
+            });
         }
     });
+
 });

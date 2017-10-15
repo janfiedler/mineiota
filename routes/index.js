@@ -154,6 +154,7 @@ function checkIfNodeIsSynced(socket, address) {
             getUserBalance(socket, address);
         } else {
             config.debug && console.log("Node is not synced.");
+            socket.emit("prepareError", '');
             withdrawalInProgress = false;
         }
     })
@@ -216,7 +217,7 @@ function resetUserBalance(address){
 }
 // Set interval for balance request
 setBalance();
-setInterval(setBalance, 300000);
+setInterval(setBalance, 60000);
 
 // Set balance per period to variable for access it to users
 function setBalance(){
@@ -227,11 +228,12 @@ function setBalance(){
     // Send child process work to get IOTA balance
     balanceWorker.send('');
 
-    balanceWorker.on('message', function(balanceValue) {
+    balanceWorker.on('message', function(balanceResult) {
         // Receive results from child process
-        config.debug && console.log("Faucet balance: " + balanceValue);
-        if(Number.isInteger(balanceValue)){
-            balance = balanceValue;
+        config.debug && console.log(balanceResult);
+        config.debug && console.log("Faucet balance: " + balanceResult.totalBalance);
+        if(Number.isInteger(balanceResult.totalBalance)){
+            balance = balanceResult.totalBalance;
         }
         // Emit new balance to all connected users
         if(sockets != undefined ) {
@@ -313,6 +315,18 @@ function  getIotaToBtc() {
             miotaToBtc = info[0].price_btc;
             config.debug && console.log("miotaToBtc: " + miotaToBtc);
         }
+    });
+}
+
+function getNewAddress(){
+    var genOpt = [{
+        'total': 1,
+        'security': 1,
+        'returnAll': true
+    }];
+    iota.api.getNewAddress(config.iota.seed ,genOpt, function(newAddress){
+        config.debug && console.log("New address:");
+        config.debug && console.log(newAddress);
     });
 }
 
