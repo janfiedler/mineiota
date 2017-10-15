@@ -53,13 +53,13 @@ setInterval(function () {
     if(funqueue.length > 0 && !withdrawalInProgress) {
         // Set withdraw is in progress
         withdrawalInProgress = true;
+        // Send to waiting sockets in queue their position
+        sendQueuePosition();
         // Run and remove first task
         (funqueue.shift())();
         // Remove socket id and socket for waiting list
         queueIds.shift();
         queueSockets.shift();
-        // Send to waiting sockets in queue their position
-        sendQueuePosition();
     } else {
         config.debug && console.log('Miners online: '+sockets.length);
         config.debug && console.log('Transactions in queue: '+funqueue.length);
@@ -69,8 +69,8 @@ setInterval(function () {
 function sendQueuePosition(){
     if(queueSockets != undefined ) {
         queueSockets.forEach(function (queueSocket){
-            config.debug && console.log(queueSocket.id+" is in queue " + (queueIds.indexOf(queueSocket.id)+1));
-            queueSocket.emit('queuePosition', {position: queueIds.indexOf(queueSocket.id)+1});
+            config.debug && console.log(queueSocket.id+" is in queue " + (parseInt(queueIds.indexOf(queueSocket.id))+parseInt(1)));
+            queueSocket.emit('queuePosition', {position: (parseInt(queueIds.indexOf(queueSocket.id))+parseInt(1))});
         });
     }
 };
@@ -114,8 +114,8 @@ io.on('connection', function (socket) {
             queueIds.push(socket.id);
             queueSockets.push(socket);
             // Send to client position in queue
-            config.debug && console.log(data.address+" is in queue " + queueIds.indexOf(socket.id)+1);
-            socket.emit('queuePosition', {position: queueIds.indexOf(socket.id)+1});
+            config.debug && console.log(data.address+" is in queue " + (parseInt(queueIds.indexOf(socket.id))+parseInt(1)));
+            socket.emit('queuePosition', {position: (parseInt(queueIds.indexOf(socket.id))+parseInt(1))});
         } else {
             fn({done:0});
         }
