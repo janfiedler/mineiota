@@ -149,7 +149,7 @@ $( document ).ready(function() {
     socket.on('queuePosition', function (data) {
         //console.log(data);
         if(data.position>1){
-            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your withdrawal request is '+data.position+'th in a row. One request takes approx. between  10 - 20 seconds. Please wait.</div>');
+            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your withdrawal request is '+data.position+'th in a row. Please wait.</div>');
         } else {
             $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your request is now in progress. Wait on transaction data.</div>');
         }
