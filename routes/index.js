@@ -251,13 +251,16 @@ function checkReattachable(inputAddress){
 function isReattachable(){
     if(inputAddressConfirm !== null) {
         iota.api.isReattachable(inputAddressConfirm, function (errors, Bool) {
-            config.debug && console.log(Bool);
+
             // If false, transaction was confirmed
             if (!Bool) {
                 clearInterval(waitConfirm);
                 // We are done, next in queue can go
+                config.debug && console.log("Transaction is confirmed: " + inputAddressConfirm);
                 withdrawalInProgress = false;
                 inputAddressConfirm = null;
+            } else {
+                config.debug && console.log("Waiting on transaction confirmation: " + inputAddressConfirm);
             }
         });
     }
