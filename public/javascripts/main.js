@@ -134,6 +134,9 @@ $( document ).ready(function() {
         document.getElementById("faucetBalance").innerText = document.createTextNode(data.balance).textContent;
         //console.log(data);
     });
+    socket.on('zeroValueRequest', function () {
+        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;We cannot process zero value payout request. Please do some mining first.</div>');
+    });
     socket.on('attachToTangle', function (data, fn) {
         //TRYTES was received, confirm back
         fn({success:true});

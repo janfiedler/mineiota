@@ -166,8 +166,16 @@ function getUserBalance(socket, address){
         if (!error && response.statusCode == 200) {
             config.debug && console.log(body);
             var info = JSON.parse(body);
-            config.debug && console.log("User: " + address + " Balance: " + info.balance + " HashIotaRatio: " + hashIotaRatio + " Payout: " + Math.floor(info.balance*hashIotaRatio));
-            prepareLocalTransfers(socket, address, Math.floor(info.balance*hashIotaRatio));
+            // We can´t payout 0 value reward
+            var valuePayout = (Math.floor(info.balance*hashIotaRatio;
+            if(valuePayout > 0){
+                config.debug && console.log("User: " + address + " Balance: " + info.balance + " HashIotaRatio: " + hashIotaRatio + " Payout: " + valuePayout);
+                prepareLocalTransfers(socket, address, valuePayout);
+            } else {
+                socket.emit("zeroValueRequest", "");
+                withdrawalInProgress = false;
+            }
+
         } else {
             withdrawalInProgress = false;
         }
