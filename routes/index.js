@@ -55,13 +55,13 @@ setInterval(function () {
     if(funqueue.length > 0 && !withdrawalInProgress) {
         // Set withdraw is in progress
         withdrawalInProgress = true;
-        // Send to waiting sockets in queue their position
-        sendQueuePosition();
         // Run and remove first task
         (funqueue.shift())();
         // Remove socket id and socket for waiting list
         queueIds.shift();
         queueSockets.shift();
+        // Send to waiting sockets in queue their position
+        sendQueuePosition();
     } else {
         config.debug && console.log('Miners online: '+sockets.length);
         config.debug && console.log('Transactions in queue: '+funqueue.length);
