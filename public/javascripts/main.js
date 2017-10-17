@@ -148,8 +148,8 @@ $( document ).ready(function() {
     });
     socket.on('queuePosition', function (data) {
         //console.log(data);
-        if(data.position>1){
-            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your withdrawal request is '+data.position+'th in a row. Please wait.</div>');
+        if(data.position>0){
+            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your withdrawal request is '+data.position+'th in a row. Please wait. Or close page and do withdrawal request again later.</div>');
         } else {
             $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your request is now in progress. Wait on transaction data.</div>');
         }
