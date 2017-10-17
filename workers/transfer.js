@@ -20,23 +20,48 @@ process.on('message', function(message) {
             'security': parseInt(2),
             'threshold': parseInt(message[0].value)
         };
+        // Get inputs for next transaction by options
         iota.api.getInputs(config.iota.seed, options, function (error, inputsData) {
             if (error) {
                 process.send(error);
             } else {
-                //use received data from getInputs for transaction
+                // Loop or keyIndex, get new index from last
+                var keyIndexNew;
+                for (var i = 0, len = inputsData.inputs.length; i < len; i++) {
+                    keyIndexNew = inputsData.inputs[i].keyIndex;
+                }
+                // Add +1 for new address
+                keyIndexNew = (parseInt(keyIndexNew) + parseInt(1));
+
+                // Specify option for faster generating new address
                 var options = {
-                    'inputs': inputsData.inputs,
-                    'security': parseInt(2)
+                    'index' : keyIndexNew,
+                    'checksum': false,
+                    'total': 1,
+                    'security': 2,
+                    'returnAll': false
                 };
-                iota.api.prepareTransfers(config.iota.seed, message, options, function (error, success) {
+                // Generate new address by options
+                iota.api.getNewAddress(config.iota.seed, options, function(error, newAddress){
+
                     if (error) {
                         console.log(error);
-                        process.send({status: "error", result: error});
-                    } else {
-                        console.log(success);
-                        process.send({status: "success", result: success, keyIndex: inputsData.inputs[0].keyIndex});
+                        return;
                     }
+                    //use received data from getInputs and newAddress for transaction
+                    var options = {
+                        'inputs': inputsData.inputs,
+                        'address' : newAddress[0],
+                        'security': parseInt(2)
+                    };
+                    // Prepare trytes data
+                    iota.api.prepareTransfers(config.iota.seed, message, options, function (error, success) {
+                        if (error) {
+                            process.send({status: "error", result: error});
+                        } else {
+                            process.send({status: "success", result: success, keyIndex: inputsData.inputs[0].keyIndex});
+                        }
+                    });
                 });
             }
         });

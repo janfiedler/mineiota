@@ -110,7 +110,7 @@ io.on('connection', function (socket) {
 
         if(isAddress(data.address)){
             //Add withdraw request to queue
-            function withdrawRequest() { checkIfNodeIsSynced(socket, data.address); };
+            function withdrawRequest() { checkIfNodeIsSynced(socket, data.address); }
             fn({done:1});
             funqueue.push(withdrawRequest);
             queueIds.push(socket.id);
@@ -192,9 +192,15 @@ function prepareLocalTransfers(socket, address, value){
         //var data = JSON.parse(result);
         if(result.status == "success"){
             config.debug && console.log(result.result);
-            //Before send trytes to attach, reset user balance on coinhive.com
-            resetUserBalance(address);
-            socket.emit("attachToTangle", result.result);
+
+            socket.emit("attachToTangle", result.result, function(confirmation){
+                if(confirmation.success == true){
+                    //After send trytes to attach, reset user balance on coinhive.com
+                    resetUserBalance(address);
+                } else {
+                    config.debug && console.log('emit attachToTangle to client failed');
+                }
+            });
 
             //We store actual keyIndex for next faster search and transaction
             if(typeof result.keyIndex !== 'undefined'){
@@ -333,18 +339,6 @@ function  getIotaToBtc() {
             miotaToBtc = info[0].price_btc;
             config.debug && console.log("miotaToBtc: " + miotaToBtc);
         }
-    });
-}
-
-function getNewAddress(){
-    var genOpt = [{
-        'total': 1,
-        'security': 1,
-        'returnAll': true
-    }];
-    iota.api.getNewAddress(config.iota.seed ,genOpt, function(newAddress){
-        config.debug && console.log("New address:");
-        config.debug && console.log(newAddress);
     });
 }
 

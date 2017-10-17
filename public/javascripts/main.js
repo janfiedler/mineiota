@@ -13,6 +13,8 @@ $( document ).ready(function() {
     curl.init();
     var iota; // initialized in initializeIOTA
     var sendStarted = false;
+    // global variable for store incoming trytes as backup
+    var trytesData;
 
 
     $("#setAddress").click(function() {
@@ -132,10 +134,13 @@ $( document ).ready(function() {
         document.getElementById("faucetBalance").innerText = document.createTextNode(data.balance).textContent;
         //console.log(data);
     });
-    socket.on('attachToTangle', function (data) {
-        //console.log(data);
+    socket.on('attachToTangle', function (data, fn) {
+        //TRYTES was received, confirm back
+        fn({success:true});
+        console.log(data);
+        trytesData = data;
         $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Received transaction data. Running PoW (approx. 3 minutes, depend on CPU)</div>');
-        send(data);
+        send(trytesData);
     });
     socket.on('prepareError', function (data) {
         //console.log(data);
