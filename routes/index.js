@@ -198,7 +198,9 @@ function prepareLocalTransfers(socket, address, value){
                     //After send trytes to attach, reset user balance on coinhive.com
                     resetUserBalance(address);
                 } else {
-                    config.debug && console.log('emit attachToTangle to client failed');
+                    config.debug && console.log('emit attachToTangle to client failed, maybe is disconnected');
+                    // Something wrong, next in queue can go
+                    withdrawalInProgress = false;
                 }
             });
 
