@@ -167,7 +167,7 @@ function getUserBalance(socket, address){
             config.debug && console.log(body);
             var info = JSON.parse(body);
             // We can´t payout 0 value reward
-            var valuePayout = (Math.floor(info.balance*hashIotaRatio;
+            var valuePayout = Math.floor(info.balance*hashIotaRatio);
             if(valuePayout > 0){
                 config.debug && console.log("User: " + address + " Balance: " + info.balance + " HashIotaRatio: " + hashIotaRatio + " Payout: " + valuePayout);
                 prepareLocalTransfers(socket, address, valuePayout);
