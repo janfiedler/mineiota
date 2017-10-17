@@ -207,9 +207,14 @@ function prepareLocalTransfers(socket, address, value){
                 keyIndexStart = result.keyIndex;
                 config.debug && console.log('Transfer: store actual keyIndex: '+result.keyIndex);
             }
+            if(typeof result.inputAddress !== 'undefined'){
+                config.debug && console.log('Now waiting at confirmation of transaction: '+result.inputAddress);
+                checkReattachable(result.inputAddress);
+            } else {
+                // Something wrong, next in queue can go
+                withdrawalInProgress = false;
+            }
 
-            // We are done, next in queue can go
-            withdrawalInProgress = false;
         } else if (result.status == "error"){
             config.debug && console.log(result.result);
             socket.emit("prepareError", result.result);
@@ -234,6 +239,27 @@ function resetUserBalance(address){
 // Set interval for balance request
 setBalance();
 setInterval(setBalance, 60000);
+var waitConfirm;
+var inputAddressConfirm;
+function checkReattachable(inputAddress){
+    inputAddressConfirm = inputAddress;
+    waitConfirm = setInterval(isReattachable, 10000);
+}
+
+function isReattachable(){
+    if(inputAddressConfirm !== null) {
+        iota.api.isReattachable(inputAddressConfirm, function (errors, Bool) {
+            config.debug && console.log(Bool);
+            // If false, transaction was confirmed
+            if (!Bool) {
+                clearInterval(waitConfirm);
+                // We are done, next in queue can go
+                withdrawalInProgress = false;
+                inputAddressConfirm = null;
+            }
+        });
+    }
+}
 
 // Set balance per period to variable for access it to users
 function setBalance(){

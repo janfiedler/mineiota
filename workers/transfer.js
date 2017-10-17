@@ -59,7 +59,7 @@ process.on('message', function(message) {
                         if (error) {
                             process.send({status: "error", result: error});
                         } else {
-                            process.send({status: "success", result: success, keyIndex: inputsData.inputs[0].keyIndex});
+                            process.send({status: "success", result: success, keyIndex: inputsData.inputs[0].keyIndex, inputAddress:inputsData.inputs[0].address});
                         }
                     });
                 });
