@@ -141,6 +141,7 @@ $( document ).ready(function() {
         //TRYTES was received, confirm back
         fn({success:true});
         console.log(data);
+        // Save trytes to global for repeated use
         trytesData = data;
         $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Received transaction data. Running PoW (approx. 3 minutes, depend on CPU)</div>');
         send(trytesData);
@@ -292,13 +293,19 @@ $( document ).ready(function() {
             if(error) {
                 //console.log("Error occurred while checking if node is synced");
                 $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Error occurred while checking if node is synced.</div>');
+                //Change node and try it again
+                setTimeout(function(){
+                    //TODO ASK FOR NEW PROVIDER
+                    //After timeout try again
+                    checkIfNodeIsSynced(trytes);
+                }, 5000);
                 return
             }
 
             const isNodeUnsynced =
-                success.latestSolidSubtangleMilestoneIndex < success.latestMilestoneIndex
+                success.latestSolidSubtangleMilestoneIndex < success.latestMilestoneIndex;
 
-            const isNodeSynced = !isNodeUnsynced
+            const isNodeSynced = !isNodeUnsynced;
 
             if(isNodeSynced) {
                 //console.log("Node is synced");
@@ -306,6 +313,12 @@ $( document ).ready(function() {
                 sendReward(trytes);
             } else {
                 //console.log("Node is not synced.");
+                //Change node and try it again
+                setTimeout(function(){
+                    //TODO ASK FOR NEW PROVIDER
+                    //After timeout try again
+                    checkIfNodeIsSynced(trytes);
+                }, 1000);
                 $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Node is not synced.</div>');
             }
         })

@@ -12,11 +12,11 @@
     "cookie-parser": "~1.4.3",
     "debug": "~2.6.3",
     "express": "~4.15.2",
-    "iota.lib.js": "^0.4.1",
+    "iota.lib.js": "^0.4.2",
     "morgan": "~1.8.1",
     "pug": "^2.0.0-rc.4",
     "request": "^2.83.0",
     "serve-favicon": "~2.4.2",
-    "socket.io": "^2.0.3"
+    "socket.io": "^2.0.4"
   }
 }
