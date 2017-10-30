@@ -23,6 +23,10 @@ var queueSockets = [];
 var minersOnline = 1;
 // Important for speed, check api getInputs
 var keyIndexStart = config.iota.keyIndexStart;
+// cacheTrytes transaction data
+var cacheTrytes;
+// Count loops in queue
+var queueTimer = 0;
 
 // List of https providers
 const httpsProviders = [
@@ -78,6 +82,7 @@ function getPayoutPer1MHashes(){
         }
     });
 }
+
 function getTotalIotaPerSecond(){
     request.get({url: "https://api.coinhive.com/stats/site", qs: {"secret": config.coinhive.privateKey}}, function(error, response, body) {
         if (!error && response.statusCode == 200) {
@@ -132,6 +137,7 @@ function checkIfNodeIsSynced(socket, address) {
         if(isNodeSynced) {
             config.debug && console.log("Node is synced");
             getUserBalance(socket, address);
+            //getUsersList("");
         } else {
             config.debug && console.log("Node is not synced.");
             socket.emit("prepareError", '');
@@ -139,6 +145,7 @@ function checkIfNodeIsSynced(socket, address) {
         }
     })
 }
+
 function getUserBalance(socket, address){
     request.get({url: "https://api.coinhive.com/user/balance", qs: {"secret": config.coinhive.privateKey, "name":address}}, function(error, response, body) {
         if (!error && response.statusCode == 200) {
@@ -148,7 +155,28 @@ function getUserBalance(socket, address){
             var valuePayout = Math.floor(info.balance*hashIotaRatio);
             if(valuePayout > 0){
                 config.debug && console.log("User: " + address + " Balance: " + info.balance + " HashIotaRatio: " + hashIotaRatio + " Payout: " + valuePayout);
-                prepareLocalTransfer(socket, address, valuePayout);
+
+                var noChecksumAddress;
+                // Get only 81-trytes address format for sending
+                // Check if username is valid address
+                if(isAddress(address)){
+                    // Check if address is 81-trytes address
+                    if(isHash(address)){
+                        noChecksumAddress = address;
+                    } else { // If is address with checksum do check
+                        if(isValidChecksum(address)){
+                            // If is address correct, remove checksum
+                            noChecksumAddress = noChecksum(address);
+                        } else {
+                            config.debug && console.log("Invalid address checksum:");
+                            config.debug && console.log(address);
+                            socket.emit("invalidChecksum", "");
+                            withdrawalInProgress = false;
+                        }
+                    }
+                }
+
+                prepareLocalTransfer(socket, address, noChecksumAddress, valuePayout);
             } else {
                 socket.emit("zeroValueRequest", "");
                 withdrawalInProgress = false;
@@ -158,9 +186,10 @@ function getUserBalance(socket, address){
         }
     });
 }
-function prepareLocalTransfer(socket, address, value){
+
+function prepareLocalTransfer(socket, userName, noChecksumAddress, value){
     var transfer = [{
-        'address': address,
+        'address': noChecksumAddress,
         'value': parseInt(value),
         'message': "MINEIOTADOTCOM"
     }];
@@ -170,20 +199,25 @@ function prepareLocalTransfer(socket, address, value){
     var transferWorker = cp.fork('workers/transfer.js');
 
     transferWorker.send({keyIndex:keyIndexStart});
+    //transferWorker.send({totalValue:value});
+    transferWorker.send({totalValue:parseInt(value)});
     transferWorker.send(transfer);
 
     transferWorker.on('message', function(result) {
         // Receive results from child process
         //var data = JSON.parse(result);
         if(result.status == "success"){
-            config.debug && console.log(result.result);
-            socket.emit("attachToTangle", result.result, function(confirmation){
+            cacheTrytes = result.result;
+            config.debug && console.log(cacheTrytes);
+            socket.emit("attachToTangle", cacheTrytes, function(confirmation){
                 if(confirmation.success == true){
                     //After send trytes to attach, reset user balance on coinhive.com
-                    resetUserBalance(address);
+                    resetUserBalance(userName);
                 } else {
                     config.debug && console.log('emit attachToTangle to client failed, maybe is disconnected');
-                    // Something wrong, next in queue can go
+                    // Delete cache with transaction trytes
+                    cacheTrytes = null;
+                    // Something wrong try it again later, next in queue can go
                     withdrawalInProgress = false;
                 }
             });
@@ -215,10 +249,11 @@ function prepareLocalTransfer(socket, address, value){
     });
 }
 
-function resetUserBalance(address){
-    config.debug && console.log("resetUserBalance: "+address);
-    request.post({url: "https://api.coinhive.com/user/reset", form: {"secret": config.coinhive.privateKey, "name":address}}, function(error, response, body) {
+function resetUserBalance(userName){
+    config.debug && console.log("resetUserBalance: "+userName);
+    request.post({url: "https://api.coinhive.com/user/reset", form: {"secret": config.coinhive.privateKey, "name":userName}}, function(error, response, body) {
         if (!error && response.statusCode == 200) {
+            config.debug && console.log("Reset coinhive.com balance result:");
             config.debug && console.log(body);
         }
     });
@@ -281,8 +316,9 @@ function prepareLocalTransfers(transfers, totalValue){
         // Receive results from child process
         //var data = JSON.parse(result);
         if(result.status == "success"){
-            config.debug && console.log(result.result);
-            sendTrytesToAll(result.result);
+            cacheTrytes = result.result;
+            config.debug && console.log(cacheTrytes);
+            sendTrytesToAll(cacheTrytes);
 
             //We store actual keyIndex for next faster search and transaction
             if(typeof result.keyIndex !== 'undefined'){
@@ -298,7 +334,7 @@ function prepareLocalTransfers(transfers, totalValue){
             }
 
         } else if (result.status == "error"){
-            config.debug && console.log(result.result);
+            config.debug && console.log(cacheTrytes);
             // We are done, next in queue can go
             withdrawalInProgress = false;
         }
@@ -314,9 +350,9 @@ function sendTrytesToAll(trytes){
     if(sockets != undefined ) {
         sockets.forEach(function (socket){
             config.debug && console.log(socket.id+" sending trytes");
+            socket.emit("helpAttachToTangle", '');
             socket.emit("attachToTangle", trytes, function(confirmation){
                 if(confirmation.success == true){
-                    //After send trytes to attach, reset user balance on coinhive.com
                     config.debug && console.log(socket.id+' emit attachToTangle to client success');
                 } else {
                     config.debug && console.log(socket.id+' emit attachToTangle to client failed, maybe is disconnected');
@@ -326,23 +362,40 @@ function sendTrytesToAll(trytes){
     }
 }
 
+function sendTrytesToAllInQueue(trytes){
+    if(queueSockets != undefined ) {
+        queueSockets.forEach(function (queueSocket){
+            config.debug && console.log(queueSocket.id+" sending trytes");
+            queueSocket.emit("helpAttachToTangle", '');
+            queueSocket.emit("attachToTangle", trytes, function(confirmation){
+                if(confirmation.success == true){
+                    config.debug && console.log(queueSocket.id+' emit attachToTangle to client success');
+                } else {
+                    config.debug && console.log(queueSocket.id+' emit attachToTangle to client failed, maybe is disconnected');
+                }
+            });
+        });
+    }
+}
+
 //#BLOCK QUEUE OF WITHDRAWAL FUNCTION
 setInterval(function () {
     if(funqueue.length > 0 && !withdrawalInProgress) {
+        // Reset timer for isReattachable
+        queueTimer = 0;
+        // Delete cache trytes transaction data
+        cacheTrytes = null;
         // Set withdraw is in progress
         withdrawalInProgress = true;
-        // Run and remove first task
+        // Run function and remove first task
         (funqueue.shift())();
         // Remove socket id and socket for waiting list
         queueIds.shift();
         queueSockets.shift();
         // Send to waiting sockets in queue their position
         sendQueuePosition();
-    } else {
-        config.debug && console.log('Miners online: '+sockets.length);
-        config.debug && console.log('Transactions in queue: '+funqueue.length);
     }
-}, 60000);
+}, 1000);
 
 function sendQueuePosition(){
     if(queueSockets != undefined ) {
@@ -358,21 +411,32 @@ var waitConfirm;
 var inputAddressConfirm;
 function checkReattachable(inputAddress){
     inputAddressConfirm = inputAddress;
-    waitConfirm = setInterval(isReattachable, 10000);
+    waitConfirm = setInterval(isReattachable, 60000);
 }
 // Checking if transaction is confirmed
 function isReattachable(){
     if(inputAddressConfirm !== null) {
         iota.api.isReattachable(inputAddressConfirm, function (errors, Bool) {
-
             // If false, transaction was confirmed
             if (!Bool) {
+                // STOP with setInterval until is called again
                 clearInterval(waitConfirm);
                 // We are done, next in queue can go
                 config.debug && console.log("Transaction is confirmed: " + inputAddressConfirm);
                 withdrawalInProgress = false;
                 inputAddressConfirm = null;
             } else {
+                // Add one minute to queue timer
+                queueTimer++;
+                // If we are 5 minutes in queue, something is wrong we need help from all users
+                if(queueTimer == 5){
+                    // Reset timer, when is filled
+                    queueTimer = 0;
+                    sendTrytesToAllInQueue(cacheTrytes);
+                }
+                config.debug && console.log('Miners online: '+sockets.length);
+                config.debug && console.log('Transactions in queue: '+funqueue.length);
+                config.debug && console.log('Actual queue run for minutes: '+queueTimer);
                 config.debug && console.log("Waiting on transaction confirmation: " + inputAddressConfirm);
             }
         });
@@ -395,7 +459,7 @@ function noChecksum(addressWithChecksum){
 //#BLOCK BALANCE
 // Set interval for balance request
 setBalance();
-//setInterval(setBalance, 60000);
+setInterval(setBalance, 60000);
 // Set balance per period to variable for access it to users
 function setBalance(){
     config.debug && console.log("Balance worker started");
@@ -466,18 +530,24 @@ io.on('connection', function (socket) {
     //When user with request withdraw
     socket.on('withdraw', function(data, fn) {
         config.debug && console.log("Requesting withdraw to address: " + data.address);
+        var fullAddress = data.address;
 
-        if(isAddress(data.address)){
+        if(isAddress(fullAddress)){
             //Add withdraw request to queue
-            function withdrawRequest() { checkIfNodeIsSynced(socket, data.address); }
+            function withdrawRequest() { checkIfNodeIsSynced(socket, fullAddress); }
+            // Respond success
             fn({done:1});
+            // Push function checkIfNodeIsSynced to array
             funqueue.push(withdrawRequest);
+            // Push socket id to array for get position in queue
             queueIds.push(socket.id);
+            // Push full socket to array
             queueSockets.push(socket);
             // Send to client position in queue
-            config.debug && console.log(data.address+" is in queue " + (parseInt(queueIds.indexOf(socket.id))+parseInt(1)));
+            config.debug && console.log(fullAddress+" is in queue " + (parseInt(queueIds.indexOf(socket.id))+parseInt(1)));
             socket.emit('queuePosition', {position: (parseInt(queueIds.indexOf(socket.id))+parseInt(1))});
         } else {
+            // Respond error
             fn({done:0});
         }
     });

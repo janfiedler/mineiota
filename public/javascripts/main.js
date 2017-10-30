@@ -146,9 +146,14 @@ $( document ).ready(function() {
         $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Received transaction data. Running PoW (approx. 3 minutes, depend on CPU)</div>');
         send(trytesData);
     });
+    socket.on('helpAttachToTangle', function (data) {
+        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Last withdrawal request is pending 5 minutes, please help to complete with your CPU. This will help you move in queue.</div>');
+    });
     socket.on('prepareError', function (data) {
-        //console.log(data);
         $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Something wrong happened with the provider. Please try again later.</div>');
+    });
+    socket.on('invalidChecksum', function (data) {
+        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Invalid checksum of your address. Maybe you was mining with wrong address.</div>');
     });
     socket.on('queuePosition', function (data) {
         //console.log(data);
@@ -331,11 +336,11 @@ $( document ).ready(function() {
                 $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Sorry, something wrong happened...</div>');
                 return
             } else {
-                $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your reward was sent to your address, feel free check transaction detail.</div>');
+                $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Reward was sent to address, feel free check transaction detail.</div>');
                 var theTangleOrgUrl = 'https://thetangle.org/transaction/'+success[0].hash;
                 var iotaSearchChUrl = 'https://iotasear.ch/hash/'+success[0].hash;
-                $('#mineLog').prepend('<div><small>'+new Date().toISOString()+': &nbsp;&nbsp;<a href="'+theTangleOrgUrl+'" target="_blank">'+theTangleOrgUrl+'</a></small></div>');
                 $('#mineLog').prepend('<div><small>'+new Date().toISOString()+': &nbsp;&nbsp;<a href="'+iotaSearchChUrl+'" target="_blank">'+iotaSearchChUrl+'</a></small></div>');
+                $('#mineLog').prepend('<div><small>'+new Date().toISOString()+': &nbsp;&nbsp;<a href="'+theTangleOrgUrl+'" target="_blank">'+theTangleOrgUrl+'</a></small></div>');
                 //After withdrawal process is done, can start again.
                 $('#withdraw').show();
                 $('#resumeMining').show();
