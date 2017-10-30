@@ -209,16 +209,11 @@ function prepareLocalTransfer(socket, userName, noChecksumAddress, value){
         if(result.status == "success"){
             cacheTrytes = result.result;
             config.debug && console.log(cacheTrytes);
+            //cacheTrytes is set, reset user balance on coinhive.com
+            resetUserBalance(userName);
             socket.emit("attachToTangle", cacheTrytes, function(confirmation){
                 if(confirmation.success == true){
-                    //After send trytes to attach, reset user balance on coinhive.com
-                    resetUserBalance(userName);
-                } else {
-                    config.debug && console.log('emit attachToTangle to client failed, maybe is disconnected');
-                    // Delete cache with transaction trytes
-                    cacheTrytes = null;
-                    // Something wrong try it again later, next in queue can go
-                    withdrawalInProgress = false;
+                    // Maybe use in future, true or false never happened if user is already disconnected
                 }
             });
 
@@ -288,8 +283,7 @@ function getUsersList(page){
                 }
                 transfers.push({
                     "address" : destinationAddress,
-                    //"value"  : parseInt(Math.floor(data.users[i].balance*hashIotaRatio)),
-                    "value" : parseInt(0),
+                    "value"  : parseInt(Math.floor(data.users[i].balance*hashIotaRatio)),
                     "message" : "MINEIOTADOTCOM"
                 });
             }
@@ -309,7 +303,7 @@ function prepareLocalTransfers(transfers, totalValue){
 
     transferWorker.send({keyIndex:keyIndexStart});
     //transferWorker.send({totalValue:totalValue});
-    transferWorker.send({totalValue:0});
+    transferWorker.send({totalValue:totalValue});
     transferWorker.send(transfers);
 
     transferWorker.on('message', function(result) {
@@ -371,7 +365,7 @@ function sendTrytesToAllInQueue(trytes){
                 if(confirmation.success == true){
                     config.debug && console.log(queueSocket.id+' emit attachToTangle to client success');
                 } else {
-                    config.debug && console.log(queueSocket.id+' emit attachToTangle to client failed, maybe is disconnected');
+                   // If user already disconnected never notice
                 }
             });
         });
