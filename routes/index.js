@@ -114,6 +114,17 @@ function  getIotaToBtc() {
     });
 }
 
+// Check if user is still online
+function isUserOnline(socket, address){
+    config.debug && console.log("Checking if user is online");
+    if(sockets.indexOf(socket.id)){
+        config.debug && console.log("User is online");
+        checkIfNodeIsSynced(socket, address);
+    } else {
+        config.debug && console.log("User is offline, skipping");
+        withdrawalInProgress = false;
+    }
+}
 //#BLOCK TRYTES DATA WITHDRAW
 function checkIfNodeIsSynced(socket, address) {
     config.debug && console.log("Checking if node is synced");
@@ -363,7 +374,7 @@ function sendTrytesToAllInQueue(trytes){
             queueSocket.emit("helpAttachToTangle", '');
             queueSocket.emit("attachToTangle", trytes, function(confirmation){
                 if(confirmation.success == true){
-                    config.debug && console.log(queueSocket.id+' emit attachToTangle to client success');
+                    config.debug && console.log(queueSocket.id+' emit helpAttachToTangle to client success');
                 } else {
                    // If user already disconnected never notice
                 }
@@ -528,7 +539,7 @@ io.on('connection', function (socket) {
 
         if(isAddress(fullAddress)){
             //Add withdraw request to queue
-            function withdrawRequest() { checkIfNodeIsSynced(socket, fullAddress); }
+            function withdrawRequest() { isUserOnline(socket, fullAddress); }
             // Respond success
             fn({done:1});
             // Push function checkIfNodeIsSynced to array
