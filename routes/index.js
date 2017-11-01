@@ -117,7 +117,7 @@ function  getIotaToBtc() {
 // Check if user is still online
 function isUserOnline(socket, address){
     config.debug && console.log(new Date().toISOString()+" Checking if user is online");
-    if(sockets.indexOf(socket.id)){
+    if(sockets.indexOf(socket)){
         config.debug && console.log(new Date().toISOString()+" User "+socket.id+" is online");
         checkIfNodeIsSynced(socket, address);
     } else {
@@ -297,6 +297,7 @@ function getUsersList(page){
                     "value"  : parseInt(Math.floor(data.users[i].balance*hashIotaRatio)),
                     "message" : "MINEIOTADOTCOM"
                 });
+                resetUserBalance(userName);
             }
             prepareLocalTransfers(transfers, totalValue);
         } else {
@@ -313,7 +314,6 @@ function prepareLocalTransfers(transfers, totalValue){
     var transferWorker = cp.fork('workers/transfer.js');
 
     transferWorker.send({keyIndex:keyIndexStart});
-    //transferWorker.send({totalValue:totalValue});
     transferWorker.send({totalValue:totalValue});
     transferWorker.send(transfers);
 
@@ -356,7 +356,7 @@ function sendTrytesToAll(trytes){
         sockets.forEach(function (socket){
             config.debug && console.log(new Date().toISOString()+ " "+socket.id+" sending trytes");
             socket.emit("helpAttachToTangle", '');
-            socket.emit("attachToTangle", trytes, function(confirmation){
+            socket.emit("boostAttachToTangle", trytes, function(confirmation){
                 if(confirmation.success == true){
                     config.debug && console.log(new Date().toISOString()+ " "+socket.id+' emit attachToTangle to client success');
                 } else {
@@ -388,7 +388,11 @@ function sendTrytesToAllInQueue(trytes){
 
 //#BLOCK QUEUE OF WITHDRAWAL FUNCTION
 setInterval(function () {
-    if(funqueue.length > 0 && !withdrawalInProgress) {
+    if(keyIndexStart == config.iota.keyIndexStart && !withdrawalInProgress){
+        // Set withdraw is in progress
+        withdrawalInProgress = true;
+        getUsersList("");
+    } else if(funqueue.length > 0 && !withdrawalInProgress) {
         // Reset timer for isReattachable
         queueTimer = 0;
         // Delete cache trytes transaction data
