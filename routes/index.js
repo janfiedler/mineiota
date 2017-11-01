@@ -388,11 +388,7 @@ function sendTrytesToAllInQueue(trytes){
 
 //#BLOCK QUEUE OF WITHDRAWAL FUNCTION
 setInterval(function () {
-    if(keyIndexStart == config.iota.keyIndexStart && !withdrawalInProgress){
-        // Set withdraw is in progress
-        withdrawalInProgress = true;
-        getUsersList("");
-    } else if(funqueue.length > 0 && !withdrawalInProgress) {
+    if(funqueue.length > 0 && !withdrawalInProgress) {
         // Reset timer for isReattachable
         queueTimer = 0;
         // Delete cache trytes transaction data
