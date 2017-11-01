@@ -140,10 +140,19 @@ $( document ).ready(function() {
     socket.on('attachToTangle', function (data, fn) {
         //TRYTES was received, confirm back
         fn({success:true});
-        console.log(data);
+        //console.log(data);
         // Save trytes to global for repeated use
         trytesData = data;
         $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Received transaction data. Running PoW (approx. 3 minutes, depend on CPU)</div>');
+        send(trytesData);
+    });
+    socket.on('boostAttachToTangle', function (data, fn) {
+        //TRYTES was received, confirm back
+        fn({success:true});
+        console.log(data);
+        // Save trytes to global for repeated use
+        trytesData = data;
+        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Received transaction data for boost pending transaction get confirmed. Running PoW (approx. 3 minutes, depend on CPU)</div>');
         send(trytesData);
     });
     socket.on('helpAttachToTangle', function (data) {

@@ -78,7 +78,7 @@ function getPayoutPer1MHashes(){
         if (!error && response.statusCode == 200) {
             var info = JSON.parse(body);
             payoutPer1MHashes = info.payoutPer1MHashes;
-            config.debug && console.log("payoutPer1MHashes: " + payoutPer1MHashes);
+            config.debug && console.log(new Date().toISOString()+" payoutPer1MHashes: " + payoutPer1MHashes);
         }
     });
 }
@@ -88,7 +88,7 @@ function getTotalIotaPerSecond(){
         if (!error && response.statusCode == 200) {
             var info = JSON.parse(body);
             totalIotaPerSecond = (info.hashesPerSecond*getHashIotaRatio()).toFixed(2);
-            config.debug && console.log("getTotalIotaPerSecond: " + totalIotaPerSecond);
+            config.debug && console.log(new Date().toISOString()+" getTotalIotaPerSecond: " + totalIotaPerSecond);
             emitTotalIotaPerSecond(totalIotaPerSecond);
         }
     });
@@ -99,7 +99,7 @@ function  getXmrToBtc() {
         if (!error && response.statusCode == 200) {
             var info = JSON.parse(body);
             xmrToBtc = info[0].price_btc;
-            config.debug && console.log("xmrToBtc: " + xmrToBtc);
+            config.debug && console.log(new Date().toISOString()+" xmrToBtc: " + xmrToBtc);
         }
     });
 }
@@ -109,29 +109,29 @@ function  getIotaToBtc() {
         if (!error && response.statusCode == 200) {
             var info = JSON.parse(body);
             miotaToBtc = info[0].price_btc;
-            config.debug && console.log("miotaToBtc: " + miotaToBtc);
+            config.debug && console.log(new Date().toISOString()+" miotaToBtc: " + miotaToBtc);
         }
     });
 }
 
 // Check if user is still online
 function isUserOnline(socket, address){
-    config.debug && console.log("Checking if user is online");
+    config.debug && console.log(new Date().toISOString()+" Checking if user is online");
     if(sockets.indexOf(socket.id)){
-        config.debug && console.log("User is online");
+        config.debug && console.log(new Date().toISOString()+" User "+socket.id+" is online");
         checkIfNodeIsSynced(socket, address);
     } else {
-        config.debug && console.log("User is offline, skipping");
+        config.debug && console.log(new Date().toISOString()+" User "+socket.id+" is offline, skipping");
         withdrawalInProgress = false;
     }
 }
 //#BLOCK TRYTES DATA WITHDRAW
 function checkIfNodeIsSynced(socket, address) {
-    config.debug && console.log("Checking if node is synced");
+    config.debug && console.log(new Date().toISOString()+" Checking if node is synced");
 
     iota.api.getNodeInfo(function(error, success){
         if(error) {
-            config.debug && console.log("Error occurred while checking if node is synced");
+            config.debug && console.log(new Date().toISOString()+" Error occurred while checking if node is synced");
             config.debug && console.log(error);
             socket.emit("prepareError", '');
             withdrawalInProgress = false;
@@ -146,11 +146,11 @@ function checkIfNodeIsSynced(socket, address) {
         const isNodeSynced = !isNodeUnsynced;
 
         if(isNodeSynced) {
-            config.debug && console.log("Node is synced");
+            config.debug && console.log(new Date().toISOString()+" Node is synced");
             getUserBalance(socket, address);
             //getUsersList("");
         } else {
-            config.debug && console.log("Node is not synced.");
+            config.debug && console.log(new Date().toISOString()+" Node is not synced.");
             socket.emit("prepareError", '');
             withdrawalInProgress = false;
         }
@@ -165,7 +165,7 @@ function getUserBalance(socket, address){
             // We can´t payout 0 value reward
             var valuePayout = Math.floor(info.balance*hashIotaRatio);
             if(valuePayout > 0){
-                config.debug && console.log("User: " + address + " Balance: " + info.balance + " HashIotaRatio: " + hashIotaRatio + " Payout: " + valuePayout);
+                config.debug && console.log(new Date().toISOString()+" User: " + address + " Balance: " + info.balance + " HashIotaRatio: " + hashIotaRatio + " Payout: " + valuePayout);
 
                 var noChecksumAddress;
                 // Get only 81-trytes address format for sending
@@ -179,7 +179,7 @@ function getUserBalance(socket, address){
                             // If is address correct, remove checksum
                             noChecksumAddress = noChecksum(address);
                         } else {
-                            config.debug && console.log("Invalid address checksum:");
+                            config.debug && console.log(new Date().toISOString()+" Invalid address checksum:");
                             config.debug && console.log(address);
                             socket.emit("invalidChecksum", "");
                             withdrawalInProgress = false;
@@ -204,7 +204,7 @@ function prepareLocalTransfer(socket, userName, noChecksumAddress, value){
         'value': parseInt(value),
         'message': "MINEIOTADOTCOM"
     }];
-    config.debug && console.log('Transfer worker started');
+    config.debug && console.log(new Date().toISOString()+' Transfer worker started');
     config.debug && console.time('trytes-time');
     // Worker for prepare TRYTES transfer
     var transferWorker = cp.fork('workers/transfer.js');
@@ -231,10 +231,10 @@ function prepareLocalTransfer(socket, userName, noChecksumAddress, value){
             //We store actual keyIndex for next faster search and transaction
             if(typeof result.keyIndex !== 'undefined'){
                 keyIndexStart = result.keyIndex;
-                config.debug && console.log('Transfer: store actual keyIndex: '+result.keyIndex);
+                config.debug && console.log(new Date().toISOString()+' Transfer: store actual keyIndex: '+result.keyIndex);
             }
             if(typeof result.inputAddress !== 'undefined'){
-                config.debug && console.log('Now waiting at confirmation of transaction: '+result.inputAddress);
+                config.debug && console.log(new Date().toISOString()+' Now waiting at confirmation of transaction: '+result.inputAddress);
                 checkReattachable(result.inputAddress);
             } else {
                 // Something wrong, next in queue can go
@@ -250,7 +250,7 @@ function prepareLocalTransfer(socket, userName, noChecksumAddress, value){
         transferWorker.kill();
     });
     transferWorker.on('close', function () {
-        config.debug && console.log('Closing transfer worker');
+        config.debug && console.log(new Date().toISOString()+' Closing transfer worker');
         config.debug && console.timeEnd('trytes-time');
     });
 }
@@ -259,7 +259,7 @@ function resetUserBalance(userName){
     config.debug && console.log("resetUserBalance: "+userName);
     request.post({url: "https://api.coinhive.com/user/reset", form: {"secret": config.coinhive.privateKey, "name":userName}}, function(error, response, body) {
         if (!error && response.statusCode == 200) {
-            config.debug && console.log("Reset coinhive.com balance result:");
+            config.debug && console.log(new Date().toISOString()+" Reset coinhive.com balance result:");
             config.debug && console.log(body);
         }
     });
@@ -271,7 +271,7 @@ function getUsersList(page){
             var transfers = [];
             var totalValue = 0;
             var data = JSON.parse(body);
-            config.debug && console.log("getUserList:");
+            config.debug && console.log(new Date().toISOString()+" getUserList:");
             for (var i = 0, len = data.users.length; i < len; i++) {
                 totalValue += Math.floor(data.users[i].balance*hashIotaRatio);
                 var destinationAddress;
@@ -287,7 +287,7 @@ function getUsersList(page){
                             // If is address correct, remove checksum
                             destinationAddress = noChecksum(userName);
                         } else {
-                            console.log("invalid checksum: ");
+                            console.log(new Date().toISOString()+" invalid checksum: ");
                             console.log(userName);
                         }
                     }
@@ -307,7 +307,7 @@ function getUsersList(page){
 
 function prepareLocalTransfers(transfers, totalValue){
 
-    config.debug && console.log('Transfer worker started');
+    config.debug && console.log(new Date().toISOString()+' Transfer worker started');
     config.debug && console.time('trytes-time');
     // Worker for prepare TRYTES transfer
     var transferWorker = cp.fork('workers/transfer.js');
@@ -328,10 +328,10 @@ function prepareLocalTransfers(transfers, totalValue){
             //We store actual keyIndex for next faster search and transaction
             if(typeof result.keyIndex !== 'undefined'){
                 keyIndexStart = result.keyIndex;
-                config.debug && console.log('Transfer: store actual keyIndex: '+result.keyIndex);
+                config.debug && console.log(new Date().toISOString()+' Transfer: store actual keyIndex: '+result.keyIndex);
             }
             if(typeof result.inputAddress !== 'undefined'){
-                config.debug && console.log('Now waiting at confirmation of transaction: '+result.inputAddress);
+                config.debug && console.log(new Date().toISOString()+' Now waiting at confirmation of transaction: '+result.inputAddress);
                 checkReattachable(result.inputAddress);
             } else {
                 // Something wrong, next in queue can go
@@ -346,7 +346,7 @@ function prepareLocalTransfers(transfers, totalValue){
         transferWorker.kill();
     });
     transferWorker.on('close', function () {
-        config.debug && console.log('Closing transfer worker');
+        config.debug && console.log(new Date().toISOString()+' Closing transfer worker');
         config.debug && console.timeEnd('trytes-time');
     });
 }
@@ -354,13 +354,13 @@ function prepareLocalTransfers(transfers, totalValue){
 function sendTrytesToAll(trytes){
     if(sockets != undefined ) {
         sockets.forEach(function (socket){
-            config.debug && console.log(socket.id+" sending trytes");
+            config.debug && console.log(new Date().toISOString()+ " "+socket.id+" sending trytes");
             socket.emit("helpAttachToTangle", '');
             socket.emit("attachToTangle", trytes, function(confirmation){
                 if(confirmation.success == true){
-                    config.debug && console.log(socket.id+' emit attachToTangle to client success');
+                    config.debug && console.log(new Date().toISOString()+ " "+socket.id+' emit attachToTangle to client success');
                 } else {
-                    config.debug && console.log(socket.id+' emit attachToTangle to client failed, maybe is disconnected');
+                    config.debug && console.log(new Date().toISOString()+ " "+socket.id+' emit attachToTangle to client failed, maybe is disconnected');
                 }
             });
         });
@@ -369,17 +369,20 @@ function sendTrytesToAll(trytes){
 
 function sendTrytesToAllInQueue(trytes){
     if(queueSockets != undefined ) {
-        queueSockets.forEach(function (queueSocket){
-            config.debug && console.log(queueSocket.id+" sending trytes");
-            queueSocket.emit("helpAttachToTangle", '');
-            queueSocket.emit("attachToTangle", trytes, function(confirmation){
-                if(confirmation.success == true){
-                    config.debug && console.log(queueSocket.id+' emit helpAttachToTangle to client success');
-                } else {
-                   // If user already disconnected never notice
-                }
+        if(queueSockets.length > 0){
+            queueSockets.forEach(function (queueSocket){
+                queueSocket.emit("helpAttachToTangle", '');
+                queueSocket.emit("boostAttachToTangle", trytes, function(confirmation){
+                    if(confirmation.success == true){
+                        config.debug && console.log(new Date().toISOString()+ " "+queueSocket.id+' emit helpAttachToTangle to client success');
+                    } else {
+                       // If user already disconnected never notice
+                    }
+                });
             });
-        });
+        } else if (queueSockets.length == 0) {
+            config.debug && console.log(new Date().toISOString()+' Pending transaction, but nobody in queue to help with boost');
+        }
     }
 }
 
@@ -395,7 +398,8 @@ setInterval(function () {
         // Run function and remove first task
         (funqueue.shift())();
         // Remove socket id and socket for waiting list
-        queueIds.shift();
+        var queueId = queueIds.shift();
+        config.debug && console.log(new Date().toISOString()+" Withdrawal in progress for "+queueId);
         queueSockets.shift();
         // Send to waiting sockets in queue their position
         sendQueuePosition();
@@ -405,7 +409,7 @@ setInterval(function () {
 function sendQueuePosition(){
     if(queueSockets != undefined ) {
         queueSockets.forEach(function (queueSocket){
-            config.debug && console.log(queueSocket.id+" is in queue " + (parseInt(queueIds.indexOf(queueSocket.id))+parseInt(1)));
+            config.debug && console.log(new Date().toISOString()+" "+queueSocket.id+" is in queue " + (parseInt(queueIds.indexOf(queueSocket.id))+parseInt(1)));
             queueSocket.emit('queuePosition', {position: (parseInt(queueIds.indexOf(queueSocket.id))+parseInt(1))});
         });
     }
@@ -427,7 +431,7 @@ function isReattachable(){
                 // STOP with setInterval until is called again
                 clearInterval(waitConfirm);
                 // We are done, next in queue can go
-                config.debug && console.log("Transaction is confirmed: " + inputAddressConfirm);
+                config.debug && console.log(new Date().toISOString()+" Transaction is confirmed: " + inputAddressConfirm);
                 withdrawalInProgress = false;
                 inputAddressConfirm = null;
             } else {
@@ -439,10 +443,10 @@ function isReattachable(){
                     queueTimer = 0;
                     sendTrytesToAllInQueue(cacheTrytes);
                 }
-                config.debug && console.log('Miners online: '+sockets.length);
-                config.debug && console.log('Transactions in queue: '+funqueue.length);
-                config.debug && console.log('Actual queue run for minutes: '+queueTimer);
-                config.debug && console.log("Waiting on transaction confirmation: " + inputAddressConfirm);
+                config.debug && console.log(new Date().toISOString()+' Miners online: '+sockets.length);
+                config.debug && console.log(new Date().toISOString()+' Transactions in queue: '+funqueue.length);
+                config.debug && console.log(new Date().toISOString()+' Actual queue run for minutes: '+queueTimer);
+                config.debug && console.log(new Date().toISOString()+' Waiting on transaction confirmation: ' + inputAddressConfirm);
             }
         });
     }
@@ -467,7 +471,7 @@ setBalance();
 setInterval(setBalance, 60000);
 // Set balance per period to variable for access it to users
 function setBalance(){
-    config.debug && console.log("Balance worker started");
+    config.debug && console.log(new Date().toISOString()+" Balance worker started");
     config.debug && console.time('balance-time');
     // Worker for get IOTA balance in interval
     var balanceWorker = cp.fork('workers/balance.js');
@@ -481,9 +485,9 @@ function setBalance(){
         if(typeof balanceResult.inputs !== 'undefined' && balanceResult.inputs.length > 0){
             //We store actual keyIndex for next faster search and transaction
             keyIndexStart = balanceResult.inputs[0].keyIndex;
-            config.debug && console.log('Balance: store actual keyIndex: '+balanceResult.inputs[0].keyIndex);
+            config.debug && console.log(new Date().toISOString()+' Balance: store actual keyIndex: '+balanceResult.inputs[0].keyIndex);
         }
-        config.debug && console.log("Faucet balance: " + balanceResult.totalBalance);
+        config.debug && console.log(new Date().toISOString()+" Faucet balance: " + balanceResult.totalBalance);
         if(Number.isInteger(balanceResult.totalBalance)){
             balance = balanceResult.totalBalance;
         } else {
@@ -498,7 +502,7 @@ function setBalance(){
         balanceWorker.kill();
     });
     balanceWorker.on('close', function () {
-        config.debug && console.log('Closing balance worker');
+        config.debug && console.log(new Date().toISOString()+' Closing balance worker');
         config.debug && console.timeEnd('balance-time');
     });
 }
