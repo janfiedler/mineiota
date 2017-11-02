@@ -132,9 +132,10 @@ function checkIfNodeIsSynced(socket, address) {
         if(error) {
             config.debug && console.log(new Date().toISOString()+" Error occurred while checking if node is synced");
             config.debug && console.log(error);
-            socket.emit("prepareError", '');
-            withdrawalInProgress = false;
-            return false;
+            setTimeout(function(){
+                //If node is not synced try it again after timeout
+                checkIfNodeIsSynced(socket, address);
+            }, 1000);
         }
 
         const isNodeUnsynced =
