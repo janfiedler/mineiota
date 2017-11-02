@@ -546,7 +546,7 @@ io.on('connection', function (socket) {
 
     //When user with request withdraw
     socket.on('withdraw', function(data, fn) {
-        config.debug && console.log("Requesting withdraw to address: " + data.address);
+        config.debug && console.log("Requesting withdraw for socket: " + socket.id);
         var fullAddress = data.address;
 
         if(isAddress(fullAddress)){
