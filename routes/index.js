@@ -433,20 +433,23 @@ function isReattachable(){
                 // We are done, next in queue can go
                 config.debug && console.log(new Date().toISOString()+" Transaction is confirmed: " + inputAddressConfirm);
                 withdrawalInProgress = false;
+                queueTimer = 0;
                 inputAddressConfirm = null;
-            } else {
+            } else if (!isNaN(parseInt(queueTimer)/parseInt(5))) {
                 // Add one minute to queue timer
                 queueTimer++;
-                // If we are 5 minutes in queue, something is wrong we need help from all users
-                if(queueTimer == 5){
-                    // Reset timer, when is filled
-                    queueTimer = 0;
-                    sendTrytesToAllInQueue(cacheTrytes);
-                }
+                // On every 5 minutes in queue, something is wrong we need help from all users
+                sendTrytesToAllInQueue(cacheTrytes);
+
                 config.debug && console.log(new Date().toISOString()+' Miners online: '+sockets.length);
                 config.debug && console.log(new Date().toISOString()+' Transactions in queue: '+funqueue.length);
                 config.debug && console.log(new Date().toISOString()+' Actual queue run for minutes: '+queueTimer);
                 config.debug && console.log(new Date().toISOString()+' Waiting on transaction confirmation: ' + inputAddressConfirm);
+            } else if (queueTimer == 30){
+                // In transaction isnt confirmed after 30 minutes, skipping to the next in queue
+                withdrawalInProgress = false;
+                queueTimer = 0;
+                inputAddressConfirm = null;
             }
         });
     }

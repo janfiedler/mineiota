@@ -24,12 +24,16 @@ block content
           tr
             td
               h2.form-signin-heading Please set your confirmed address
+              h4 Do not use address without you have confirmed address in tangle
+              h5 Your address is also your username.
+              h5 If you lost position in queue, set your address again and make new withdrawal request
+              H5 If your withdrawal transaction is not confirmed in 30 minutes you lost your position in queue
               form
                 div.row
                   div.col-md-10
                     div.input-group.mb-2.mr-sm-2.mb-sm-0
                       div.input-group-addon IOTA Address
-                      input.form-control#iotaAddress(type='text',placeholder='Your address is username. You can use it again for withdrawal request ')
+                      input.form-control#iotaAddress(type='text',placeholder='Please be cautious when using the same address multiple times')
                   div.col-md-2
                     button.btn.btn-outline-secondary#setAddress(type='button') Submit
                     i.spinner#mySpinner
