@@ -439,11 +439,6 @@ function isReattachable(){
                 // Add one minute to queue timer
                 // On every 5 minutes in queue, something is wrong we need help from all users
                 sendTrytesToAllInQueue(cacheTrytes);
-
-                config.debug && console.log(new Date().toISOString()+' Miners online: '+sockets.length);
-                config.debug && console.log(new Date().toISOString()+' Transactions in queue: '+funqueue.length);
-                config.debug && console.log(new Date().toISOString()+' Actual queue run for minutes: '+queueTimer);
-                config.debug && console.log(new Date().toISOString()+' Waiting on transaction confirmation: ' + inputAddressConfirm);
             } else if (queueTimer >= 30){
                 // STOP with setInterval until is called again
                 clearInterval(waitConfirm);
@@ -451,6 +446,11 @@ function isReattachable(){
                 withdrawalInProgress = false;
                 queueTimer = 0;
                 inputAddressConfirm = null;
+            } else {
+                config.debug && console.log(new Date().toISOString()+' Miners online: '+sockets.length);
+                config.debug && console.log(new Date().toISOString()+' Actual queue run for minutes: '+queueTimer);
+                config.debug && console.log(new Date().toISOString()+' Transactions in queue: '+funqueue.length);
+                config.debug && console.log(new Date().toISOString()+' Waiting on transaction confirmation: ' + inputAddressConfirm);
             }
         });
     }
