@@ -41,6 +41,12 @@ html {
   font-size: 66px;
   margin: 0px;
 }
+.warningList {
+  list-style-type: circle;
+  margin: 0px 20px;
+  text-align: left;
+  font-size: 14px;
+}
 .warning {
   color: #ff544f;
   margin: 0px;
