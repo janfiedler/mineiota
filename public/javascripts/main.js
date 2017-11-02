@@ -152,6 +152,8 @@ $( document ).ready(function() {
     socket.on('boostAttachToTangle', function (data, fn) {
         //TRYTES was received, confirm back
         if(sendStarted){
+            $('#mineLog').prepend('<div><small>' + new Date().toISOString() + ':</small> &nbsp;&nbsp;You now already making proof of work</div>');
+
             fn({success: false});
         } else {
             fn({success: true});
