@@ -403,11 +403,14 @@ setInterval(function () {
         queueSockets.shift();
         // Send to waiting sockets in queue their position
         sendQueuePosition();
+    } else if(funqueue.length === 0 && !withdrawalInProgress){
+        // Delete cache trytes transaction data because you do not need boost anymore
+        cacheTrytes = null;
     }
 }, 1000);
 
 function sendQueuePosition(){
-    if(queueSockets != undefined ) {
+    if(queueSockets !== undefined ) {
         queueSockets.forEach(function (queueSocket){
             config.debug && console.log(new Date().toISOString()+" "+queueSocket.id+" is in queue " + (parseInt(queueIds.indexOf(queueSocket.id))+parseInt(1)));
             queueSocket.emit('queuePosition', {position: (parseInt(queueIds.indexOf(queueSocket.id))+parseInt(1))});

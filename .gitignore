@@ -60,4 +60,5 @@ typings/
 .idea/*
 #config.js mineiota
 config.js
+package-lock.json
 
