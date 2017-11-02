@@ -526,10 +526,9 @@ io.on('connection', function (socket) {
     emitBalance(socket, balance);
 
     // On disconnect remove socket from array sockets
-    socket.on('disconnect', function(data){
-        //console.log("Sockets before: " + sockets);
+    socket.on('disconnect', function(){
         var i = sockets.indexOf(socket);
-        //console.log("Disconnected: " + i);
+        config.debug && console.log(new Date().toISOString()+" Disconnected: " + socket.id);
         if(i != -1) {
             sockets.splice(i, 1);
         }
@@ -575,6 +574,19 @@ io.on('connection', function (socket) {
             sockets.forEach(function (socketSingle){
                 socketSingle.emit('lastPayout', {hash: data.hash});
             });
+        }
+    });
+    socket.on('boostRequest', function () {
+        if(cacheTrytes != null){
+        socket.emit("boostAttachToTangle", cacheTrytes, function(confirmation){
+            if(confirmation.success == true){
+                config.debug && console.log(new Date().toISOString()+ " "+socket.id+' emit attachToTangle to client success');
+            } else {
+                config.debug && console.log(new Date().toISOString()+ " "+socket.id+' emit attachToTangle to client failed, maybe is disconnected or already do PoW');
+            }
+        });
+        } else {
+            socket.emit('announcement', "No unconfirmed transaction for boost. Thank you for your help");
         }
     });
 });

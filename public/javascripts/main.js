@@ -121,6 +121,9 @@ $( document ).ready(function() {
             alert("Missing payout address!");
         }
     });
+    $("#boostButton").click(function() {
+        socket.emit('boostRequest', '');
+    });
 
     function emitPayout(payoutHash){
         socket.emit('newWithdrawalConfirmation', {hash: payoutHash});
@@ -148,12 +151,15 @@ $( document ).ready(function() {
     });
     socket.on('boostAttachToTangle', function (data, fn) {
         //TRYTES was received, confirm back
-        fn({success:true});
-        console.log(data);
-        // Save trytes to global for repeated use
-        trytesData = data;
-        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Received transaction data for boost pending transaction get confirmed. Running PoW (approx. 3 minutes, depend on CPU)</div>');
-        send(trytesData);
+        if(sendStarted){
+            fn({success: false});
+        } else {
+            fn({success: true});
+            // Save trytes to global for repeated use
+            trytesData = data;
+            $('#mineLog').prepend('<div><small>' + new Date().toISOString() + ':</small> &nbsp;&nbsp;Received transaction data for boost pending transaction get confirmed. Running PoW (approx. 3 minutes, depend on CPU)</div>');
+            send(trytesData);
+        }
     });
     socket.on('helpAttachToTangle', function (data) {
         $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Last withdrawal request is pending 5 minutes, please help to complete with your CPU. This will help you move in queue.</div>');
