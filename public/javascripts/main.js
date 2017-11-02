@@ -178,6 +178,9 @@ $( document ).ready(function() {
     socket.on('totalIotaPerSecond', function (data) {
         $('#totalSpeed').html('<span><strong>'+data.count+'</strong></span>');
     });
+    socket.on('announcement', function (data) {
+        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;'+data+'</div>');
+    });
 // PoW curl block
 // adapted from https://github.com/iotaledger/wallet/blob/master/ui/js/iota.lightwallet.js
     function send(trytes){

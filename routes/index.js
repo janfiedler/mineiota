@@ -49,7 +49,6 @@ var iota = new IOTA({
 
 // Init
 // Request on startup
-
 getPayoutPer1MHashes();
 getXmrToBtc();
 getIotaToBtc();
@@ -425,6 +424,7 @@ function checkReattachable(inputAddress){
 // Checking if transaction is confirmed
 function isReattachable(){
     if(inputAddressConfirm !== null) {
+        queueTimer++;
         iota.api.isReattachable(inputAddressConfirm, function (errors, Bool) {
             // If false, transaction was confirmed
             if (!Bool) {
@@ -435,9 +435,8 @@ function isReattachable(){
                 withdrawalInProgress = false;
                 queueTimer = 0;
                 inputAddressConfirm = null;
-            } else if (!isNaN(parseInt(queueTimer)/parseInt(5))) {
+            } else if (isInteger(parseInt(queueTimer)/parseInt(5))) {
                 // Add one minute to queue timer
-                queueTimer++;
                 // On every 5 minutes in queue, something is wrong we need help from all users
                 sendTrytesToAllInQueue(cacheTrytes);
 
@@ -445,7 +444,9 @@ function isReattachable(){
                 config.debug && console.log(new Date().toISOString()+' Transactions in queue: '+funqueue.length);
                 config.debug && console.log(new Date().toISOString()+' Actual queue run for minutes: '+queueTimer);
                 config.debug && console.log(new Date().toISOString()+' Waiting on transaction confirmation: ' + inputAddressConfirm);
-            } else if (queueTimer == 30){
+            } else if (queueTimer >= 30){
+                // STOP with setInterval until is called again
+                clearInterval(waitConfirm);
                 // In transaction isnt confirmed after 30 minutes, skipping to the next in queue
                 withdrawalInProgress = false;
                 queueTimer = 0;
@@ -467,6 +468,10 @@ function isValidChecksum(addressWithChecksum){
 }
 function noChecksum(addressWithChecksum){
     return iota.utils.noChecksum(addressWithChecksum);
+}
+// Check if it is rounded interger and not float
+function isInteger(n) {
+    return n === +n && n === (n|0);
 }
 //#BLOCK BALANCE
 // Set interval for balance request
