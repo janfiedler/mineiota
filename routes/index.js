@@ -451,8 +451,9 @@ function isReattachable(){
                 // Add one minute to queue timer
                 // On every 5 minutes in queue, something is wrong we need help from all users
                 sendTrytesToAllInQueue(cacheTrytes);
-            } else if (parseInt(queueTimer) >= parseInt(30)){
-                // In transaction isnt confirmed after 30 minutes, skipping to the next in queue
+            } else if (parseInt(queueTimer) >= parseInt(30) && parseInt(funqueue.length) > 0){
+                // In transaction is not confirmed after 30 minutes, skipping to the next in queue
+                config.debug && console.log(new Date().toISOString()+' Transaction is not confirmed after 30 minutes, skipping to the next in queue');
                 withdrawalInProgress = false;
                 queueTimer = 0;
                 inputAddressConfirm = null;
