@@ -291,6 +291,8 @@ function getUsersList(page){
                     'tag': "MINEIOTADOTCOM"
                 });
                 //resetUserBalance(userName);
+                // Add just one user to auto withdrawal transaction
+                break;
             }
             prepareLocalTransfers(transfers, totalValue);
         } else {
@@ -382,6 +384,7 @@ setInterval(function () {
         sendQueuePosition();
     } else if (funqueue.length === 0 && !withdrawalInProgress){
         // If queue is empty, make auto withdrawal to unpaid users
+        config.debug && console.log(new Date().toISOString()+" If queue is empty, make auto withdrawal to unpaid users");
 
         // Reset timer for isReattachable
         queueTimer = 0;
