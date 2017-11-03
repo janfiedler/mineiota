@@ -214,7 +214,8 @@ function prepareLocalTransfer(socket, userName, noChecksumAddress, value){
     var transfer = [{
         'address': noChecksumAddress,
         'value': parseInt(value),
-        'message': "MINEIOTADOTCOM"
+        'message': "MINEIOTADOTCOM",
+        'tag': "MINEIOTADOTCOM"
     }];
     config.debug && console.log(new Date().toISOString()+' Transfer worker started');
     config.debug && console.time('trytes-time');
@@ -307,7 +308,8 @@ function getUsersList(page){
                 transfers.push({
                     "address" : destinationAddress,
                     "value"  : parseInt(Math.floor(data.users[i].balance*hashIotaRatio)),
-                    "message" : "MINEIOTADOTCOM"
+                    "message" : "MINEIOTADOTCOM",
+                    'tag': "MINEIOTADOTCOM"
                 });
                 resetUserBalance(userName);
             }
