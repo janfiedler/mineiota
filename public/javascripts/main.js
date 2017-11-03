@@ -174,7 +174,21 @@ $( document ).ready(function() {
     socket.on('queuePosition', function (data) {
         //console.log(data);
         if(data.position>0){
-            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your withdrawal request is '+data.position+'th in a row. Please wait. Or close page and do withdrawal request again later.</div>');
+            var positionSuffix;
+            switch(data.position) {
+                case 1:
+                    positionSuffix = "st";
+                    break;
+                case 2:
+                    positionSuffix = "nd";
+                    break;
+                case 3:
+                    positionSuffix = "rd";
+                    break;
+                default:
+                    positionSuffix = "th";
+            }
+            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your withdrawal request is '+data.position+positionSuffix+' in the queue. Please wait. Or close page and do withdrawal request again later.</div>');
         } else {
             $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your request is now in progress. Wait on transaction data.</div>');
         }
