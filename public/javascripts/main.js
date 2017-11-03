@@ -181,7 +181,7 @@ $( document ).ready(function() {
     });
     socket.on('queueTotal', function (data) {
         //console.log(data.total);
-        $('#usersQueue').html('<span>Total in queue: <strong>'+data.total+'</strong></span>');
+        $('#usersQueue').html('<span>Unpaid in queue: <strong>'+data.total+'</strong></span>');
     });
     socket.on('minersOnline', function (data) {
         $('#minersOnline').html('<span><strong>'+data.count+'</strong></span>');
