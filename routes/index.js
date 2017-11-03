@@ -441,7 +441,7 @@ function isReattachable(){
                 // STOP with setInterval until is called again
                 clearInterval(waitConfirm);
                 // We are done, next in queue can go
-                config.debug && console.log(new Date().toISOString()+" Transaction is confirmed: " + inputAddressConfirm);
+                config.debug && console.log(new Date().toISOString()+" Success: Transaction is confirmed: " + inputAddressConfirm);
                 withdrawalInProgress = false;
                 // Delete cache trytes transaction data because you do not need boost anymore
                 cacheTrytes = null;
@@ -453,7 +453,7 @@ function isReattachable(){
                 sendTrytesToAllInQueue(cacheTrytes);
             } else if (parseInt(queueTimer) >= parseInt(30) && parseInt(funqueue.length) > 0){
                 // In transaction is not confirmed after 30 minutes, skipping to the next in queue
-                config.debug && console.log(new Date().toISOString()+' Transaction is not confirmed after 30 minutes, skipping to the next in queue');
+                config.debug && console.log(new Date().toISOString()+'Error: Transaction is not confirmed after 30 minutes, skipping to the next in queue');
                 withdrawalInProgress = false;
                 queueTimer = 0;
                 inputAddressConfirm = null;
