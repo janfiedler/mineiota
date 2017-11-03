@@ -187,7 +187,7 @@ $( document ).ready(function() {
         $('#minersOnline').html('<span><strong>'+data.count+'</strong></span>');
     });
     socket.on('totalIotaPerSecond', function (data) {
-        $('#totalSpeed').html('<span>&nbsp;&nbsp;total speed: <strong>'+data.count+'</strong> iota/s</span>');
+        $('#totalSpeed').html('<span>total speed: <strong>'+data.count+'</strong> iota/s</span>');
     });
     socket.on('announcement', function (data) {
         $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;'+data+'</div>');

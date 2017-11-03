@@ -127,6 +127,10 @@ td {
   width:100%;
   text-align: right;
 }
+#totalSpeed, #usersQueue{
+  margin-left: 15px;
+}
+
 #mineStats, #mySpinner, #resumeMining{
   display: none;
 }
