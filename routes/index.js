@@ -463,7 +463,11 @@ function doPow(trytes){
 
     powWorker.on('message', function(trytesResult) {
         // Receive results from child process
-        config.debug && console.log(trytesResult);
+        // Get completed transaction info
+        //config.debug && console.log(trytesResult);
+        // Get only hash from attached transaction
+        config.debug && console.log(trytesResult[0].hash);
+        emitAttachedHash(trytesResult[0].hash);
         powWorker.kill();
     });
     powWorker.on('close', function () {
@@ -585,11 +589,7 @@ io.on('connection', function (socket) {
     });
     //When user complete withdrawal, send last payout to all clients
     socket.on('newWithdrawalConfirmation', function (data) {
-        if(sockets != undefined ) {
-            sockets.forEach(function (socketSingle){
-                socketSingle.emit('lastPayout', {hash: data.hash});
-            });
-        }
+        emitAttachedHash(data.hash);
     });
     socket.on('boostRequest', function () {
         if(cacheTrytes != null){
@@ -620,10 +620,19 @@ function emitTotalIotaPerSecond(count){
         });
     }
 }
+// Emit hash of attached transaction
+function emitAttachedHash(hash){
+    if(sockets != undefined ) {
+        sockets.forEach(function (socketSingle){
+            socketSingle.emit('lastPayout', {hash: hash});
+        });
+    }
+}
 // Emit balance to connected user
 function emitBalance(socket, balanceValue){
     socket.emit('balance', { balance: balanceValue, hashIotaRatio: getHashIotaRatio() });
 }
+
 
 // WebSocket  SOCKET.IO listening
 http.listen(config.WebSocket.port, function(){
