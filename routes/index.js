@@ -61,6 +61,16 @@ setInterval(function () {
     getTotalIotaPerSecond();
 }, 60000);
 
+iota.api.isReattachable("KLNGGJMSEASYTGEKGUELPUCBGDNBVOTXQYYVMT9AVYUPBRQ9GKDSIA9YLLQJZVIHCAHQUBSMHGQORGYFD", function (errors, Bool) {
+    // If false, transaction was confirmed
+    if (Bool) {
+        config.debug && console.log(new Date().toISOString()+" Address is confirmed");
+
+    } else {
+        config.debug && console.log(new Date().toISOString()+" Address is not confirmed");
+    }
+});
+
 // #BLOCK GET ALL NEEDED DATA FOR CALCULATE PAYOUT
 function getHashIotaRatio(){
     // CoinHive convert BTC payout per 1 milion monero hashes
@@ -410,8 +420,12 @@ function sendQueuePosition(){
     if(queueSockets !== undefined ) {
         queueSockets.forEach(function (queueSocket){
             config.debug && console.log(new Date().toISOString()+" "+queueSocket.id+" is in queue " + (parseInt(queueIds.indexOf(queueSocket.id))+parseInt(1)));
-            queueSocket.emit('queueTotal', {total: (parseInt(queueSockets.length)+parseInt(1))});
             queueSocket.emit('queuePosition', {position: (parseInt(queueIds.indexOf(queueSocket.id))+parseInt(1))});
+        });
+    }
+    if(sockets !== undefined ) {
+        sockets.forEach(function (socket){
+            socket.emit('queueTotal', {total: (parseInt(queueSockets.length)+parseInt(1))});
         });
     }
 }
