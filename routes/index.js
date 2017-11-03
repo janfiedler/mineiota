@@ -63,16 +63,6 @@ setInterval(function () {
     sendQueuePosition();
 }, 60000);
 
-iota.api.isReattachable("KLNGGJMSEASYTGEKGUELPUCBGDNBVOTXQYYVMT9AVYUPBRQ9GKDSIA9YLLQJZVIHCAHQUBSMHGQORGYFD", function (errors, Bool) {
-    // If false, transaction was confirmed
-    if (Bool) {
-        config.debug && console.log(new Date().toISOString()+" Address is confirmed");
-
-    } else {
-        config.debug && console.log(new Date().toISOString()+" Address is not confirmed");
-    }
-});
-
 // #BLOCK GET ALL NEEDED DATA FOR CALCULATE PAYOUT
 function getHashIotaRatio(){
     // CoinHive convert BTC payout per 1 milion monero hashes
