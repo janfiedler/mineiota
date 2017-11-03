@@ -115,17 +115,6 @@ function  getIotaToBtc() {
     });
 }
 
-// Check if user is still online
-function isUserOnline(socket, address){
-    config.debug && console.log(new Date().toISOString()+" Checking if user is online");
-    if(sockets.indexOf(socket)){
-        config.debug && console.log(new Date().toISOString()+" User "+socket.id+" is online");
-        checkIfNodeIsSynced(socket, address);
-    } else {
-        config.debug && console.log(new Date().toISOString()+" User "+socket.id+" is offline, skipping");
-        withdrawalInProgress = false;
-    }
-}
 //#BLOCK TRYTES DATA WITHDRAW
 function checkIfNodeIsSynced(socket, address) {
     config.debug && console.log(new Date().toISOString()+" Checking if node is synced");
@@ -225,6 +214,7 @@ function prepareLocalTransfer(socket, userName, noChecksumAddress, value){
             config.debug && console.log(cacheTrytes);
             //cacheTrytes is set, reset user balance on coinhive.com
             resetUserBalance(userName);
+            doPow(cacheTrytes);
             socket.emit("attachToTangle", cacheTrytes, function(confirmation){
                 if(confirmation.success == true){
                     // Maybe use in future, true or false never happened if user is already disconnected
@@ -451,14 +441,7 @@ function isReattachable(){
                 // Add one minute to queue timer
                 // On every 5 minutes in queue, something is wrong we need help from all users
                 sendTrytesToAllInQueue(cacheTrytes);
-            } else if (parseInt(queueTimer) >= parseInt(30) && parseInt(funqueue.length) > 0){
-                // In transaction is not confirmed after 30 minutes, skipping to the next in queue
-                config.debug && console.log(new Date().toISOString()+'Error: Transaction is not confirmed after 30 minutes, skipping to the next in queue');
-                withdrawalInProgress = false;
-                queueTimer = 0;
-                inputAddressConfirm = null;
-                // STOP with setInterval until is called again
-                clearInterval(waitConfirm);
+                doPow(cacheTrytes);
             } else {
                 config.debug && console.log(new Date().toISOString()+' Miners online: '+sockets.length);
                 config.debug && console.log(new Date().toISOString()+' Actual queue run for minutes: '+queueTimer);
@@ -469,6 +452,25 @@ function isReattachable(){
     }
 }
 
+function doPow(trytes){
+    config.debug && console.log(new Date().toISOString()+" PoW worker started");
+    config.debug && console.time('pow-time');
+    // Worker for get IOTA balance in interval
+    var powWorker = cp.fork('workers/pow.js');
+    // Send child process work to get IOTA balance
+    //We pass to worker keyIndex where start looking for funds
+    powWorker.send({trytes:trytes});
+
+    powWorker.on('message', function(trytesResult) {
+        // Receive results from child process
+        config.debug && console.log(trytesResult);
+        powWorker.kill();
+    });
+    powWorker.on('close', function () {
+        config.debug && console.log(new Date().toISOString()+' Closing pow worker');
+        config.debug && console.timeEnd('pow-time');
+    });
+}
 //# BLOCK HELPERS FUNCTIONS
 function isAddress(address){
     return iota.valid.isAddress(address);
@@ -491,6 +493,7 @@ function isInteger(n) {
 setBalance();
 setInterval(setBalance, 60000);
 // Set balance per period to variable for access it to users
+
 function setBalance(){
     config.debug && console.log(new Date().toISOString()+" Balance worker started");
     config.debug && console.time('balance-time');
@@ -563,7 +566,7 @@ io.on('connection', function (socket) {
 
         if(isAddress(fullAddress)){
             //Add withdraw request to queue
-            function withdrawRequest() { isUserOnline(socket, fullAddress); }
+            function withdrawRequest() { checkIfNodeIsSynced(socket, fullAddress); }
             // Respond success
             fn({done:1});
             // Push function checkIfNodeIsSynced to array
