@@ -139,7 +139,6 @@ function checkIfNodeIsSynced(socket, address) {
         if(isNodeSynced) {
             config.debug && console.log(new Date().toISOString()+" Node is synced");
             getUserBalance(socket, address);
-            //getUsersList("");
         } else {
             config.debug && console.log(new Date().toISOString()+" Node is not synced.");
             socket.emit("prepareError", '');
@@ -259,7 +258,7 @@ function resetUserBalance(userName){
 }
 
 function getUsersList(page){
-    request.get({url: "https://api.coinhive.com/user/list", qs: {"secret": config.coinhive.privateKey,"count":8192,"page":page}}, function(error, response, body) {
+    request.get({url: "https://api.coinhive.com/user/list", qs: {"secret": config.coinhive.privateKey,"count":32,"page":page}}, function(error, response, body) {
         if (!error && response.statusCode == 200) {
             var transfers = [];
             var totalValue = 0;
@@ -291,7 +290,7 @@ function getUsersList(page){
                     "message" : "MINEIOTADOTCOM",
                     'tag': "MINEIOTADOTCOM"
                 });
-                resetUserBalance(userName);
+                //resetUserBalance(userName);
             }
             prepareLocalTransfers(transfers, totalValue);
         } else {
@@ -317,7 +316,7 @@ function prepareLocalTransfers(transfers, totalValue){
         if(result.status == "success"){
             cacheTrytes = result.result;
             config.debug && console.log(cacheTrytes);
-            sendTrytesToAll(cacheTrytes);
+            doPow(cacheTrytes);
 
             //We store actual keyIndex for next faster search and transaction
             if(typeof result.keyIndex !== 'undefined'){
@@ -343,22 +342,6 @@ function prepareLocalTransfers(transfers, totalValue){
         config.debug && console.log(new Date().toISOString()+' Closing transfer worker');
         config.debug && console.timeEnd('trytes-time');
     });
-}
-
-function sendTrytesToAll(trytes){
-    if(sockets != undefined ) {
-        sockets.forEach(function (socket){
-            config.debug && console.log(new Date().toISOString()+ " "+socket.id+" sending trytes");
-            socket.emit("helpAttachToTangle", '');
-            socket.emit("boostAttachToTangle", trytes, function(confirmation){
-                if(confirmation.success == true){
-                    config.debug && console.log(new Date().toISOString()+ " "+socket.id+' emit attachToTangle to client success');
-                } else {
-                    config.debug && console.log(new Date().toISOString()+ " "+socket.id+' emit attachToTangle to client failed, maybe is disconnected');
-                }
-            });
-        });
-    }
 }
 
 function sendTrytesToAllInQueue(trytes){
@@ -397,6 +380,18 @@ setInterval(function () {
         queueSockets.shift();
         // Send to waiting sockets in queue their position
         sendQueuePosition();
+    } else if (funqueue.length === 0 && !withdrawalInProgress){
+        // If queue is empty, make auto withdrawal to unpaid users
+
+        // Reset timer for isReattachable
+        queueTimer = 0;
+        // Delete cache trytes transaction data
+        cacheTrytes = null;
+        // Set withdraw is in progress
+        withdrawalInProgress = true;
+
+        getUsersList('');
+
     }
 }, 1000);
 
