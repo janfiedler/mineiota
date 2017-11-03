@@ -59,6 +59,8 @@ setInterval(function () {
     getIotaToBtc();
     // Emit actual iota/s speed
     getTotalIotaPerSecond();
+    // Send actual queue
+    sendQueuePosition();
 }, 60000);
 
 iota.api.isReattachable("KLNGGJMSEASYTGEKGUELPUCBGDNBVOTXQYYVMT9AVYUPBRQ9GKDSIA9YLLQJZVIHCAHQUBSMHGQORGYFD", function (errors, Bool) {
@@ -425,7 +427,7 @@ function sendQueuePosition(){
     }
     if(sockets !== undefined ) {
         sockets.forEach(function (socket){
-            socket.emit('queueTotal', {total: (parseInt(queueSockets.length)+parseInt(1))});
+            socket.emit('queueTotal', {total: queueSockets.length});
         });
     }
 }
