@@ -153,7 +153,6 @@ $( document ).ready(function() {
         //TRYTES was received, confirm back
         if(sendStarted){
             $('#mineLog').prepend('<div><small>' + new Date().toISOString() + ':</small> &nbsp;&nbsp;You now already making proof of work</div>');
-
             fn({success: false});
         } else {
             fn({success: true});
@@ -179,6 +178,10 @@ $( document ).ready(function() {
         } else {
             $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your request is now in progress. Wait on transaction data.</div>');
         }
+    });
+    socket.on('queueTotal', function (data) {
+        //console.log(data.total);
+        $('#usersQueue').html('<span>Total in queue: <strong>'+data.total+'</strong></span>');
     });
     socket.on('minersOnline', function (data) {
         $('#minersOnline').html('<span><strong>'+data.count+'</strong></span>');

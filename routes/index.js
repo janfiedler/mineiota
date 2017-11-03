@@ -403,9 +403,6 @@ setInterval(function () {
         queueSockets.shift();
         // Send to waiting sockets in queue their position
         sendQueuePosition();
-    } else if(funqueue.length === 0 && !withdrawalInProgress){
-        // Delete cache trytes transaction data because you do not need boost anymore
-        cacheTrytes = null;
     }
 }, 1000);
 
@@ -413,6 +410,7 @@ function sendQueuePosition(){
     if(queueSockets !== undefined ) {
         queueSockets.forEach(function (queueSocket){
             config.debug && console.log(new Date().toISOString()+" "+queueSocket.id+" is in queue " + (parseInt(queueIds.indexOf(queueSocket.id))+parseInt(1)));
+            queueSocket.emit('queueTotal', {total: (parseInt(queueSockets.length)+parseInt(1))});
             queueSocket.emit('queuePosition', {position: (parseInt(queueIds.indexOf(queueSocket.id))+parseInt(1))});
         });
     }
@@ -437,19 +435,21 @@ function isReattachable(){
                 // We are done, next in queue can go
                 config.debug && console.log(new Date().toISOString()+" Transaction is confirmed: " + inputAddressConfirm);
                 withdrawalInProgress = false;
+                // Delete cache trytes transaction data because you do not need boost anymore
+                cacheTrytes = null;
                 queueTimer = 0;
                 inputAddressConfirm = null;
             } else if (isInteger(parseInt(queueTimer)/parseInt(5))) {
                 // Add one minute to queue timer
                 // On every 5 minutes in queue, something is wrong we need help from all users
                 sendTrytesToAllInQueue(cacheTrytes);
-            } else if (queueTimer >= 30){
-                // STOP with setInterval until is called again
-                clearInterval(waitConfirm);
+            } else if (parseInt(queueTimer) >= parseInt(30)){
                 // In transaction isnt confirmed after 30 minutes, skipping to the next in queue
                 withdrawalInProgress = false;
                 queueTimer = 0;
                 inputAddressConfirm = null;
+                // STOP with setInterval until is called again
+                clearInterval(waitConfirm);
             } else {
                 config.debug && console.log(new Date().toISOString()+' Miners online: '+sockets.length);
                 config.debug && console.log(new Date().toISOString()+' Actual queue run for minutes: '+queueTimer);
