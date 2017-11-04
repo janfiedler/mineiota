@@ -462,9 +462,9 @@ function doPow(trytes){
     powWorker.on('message', function(trytesResult) {
         // Receive results from child process
         // Get completed transaction info
-        config.debug && console.log(trytesResult);
+        //config.debug && console.log(trytesResult);
         // Get only hash from attached transaction
-        config.debug && console.log(trytesResult[0].hash);
+        config.debug && console.log("Success: hash from attached transaction " + trytesResult[0].hash);
         emitAttachedHash(trytesResult[0].hash);
         powWorker.kill();
     });
