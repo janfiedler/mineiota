@@ -262,10 +262,10 @@ $( document ).ready(function() {
     });
     socket.on('queueTotal', function (data) {
         //console.log(data.total);
-        $('#usersQueue').html('<span>Unpaid in queue: <strong>'+data.total+'</strong></span>');
+        $('#usersQueue').html('<span>unpaid in queue: <strong>'+data.total+'</strong></span>');
     });
     socket.on('minersOnline', function (data) {
-        $('#minersOnline').html('<span><strong>'+data.count+'</strong></span>');
+        $('#minersOnline').html('<span>miners online: <strong>'+data.count+'</strong></span>');
     });
     socket.on('totalIotaPerSecond', function (data) {
         $('#totalSpeed').html('<span>total speed: <strong>'+data.count+'</strong> iota/s</span>');
