@@ -373,6 +373,7 @@ function getTopUsers(){
                     // Add just one user to auto withdrawal transaction
                 } else {
                     withdrawalInProgress = false;
+                    return;
                 }
                 break;
             }
