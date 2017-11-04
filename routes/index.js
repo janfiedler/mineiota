@@ -90,6 +90,7 @@ function getTotalIotaPerSecond(){
             var info = JSON.parse(body);
             totalIotaPerSecond = (info.hashesPerSecond*getHashIotaRatio()).toFixed(2);
             config.debug && console.log(new Date().toISOString()+" getTotalIotaPerSecond: " + totalIotaPerSecond);
+            config.debug && console.log(new Date().toISOString()+" hashIotaRatio: " + hashIotaRatio);
             emitTotalIotaPerSecond(totalIotaPerSecond);
         }
     });
@@ -143,7 +144,8 @@ setInterval(function () {
         // Set withdraw is in progress
         withdrawalInProgress = true;
 
-        getUsersList('');
+        //getUsersList('');
+        getTopUsers();
     }
 }, 1000);
 
@@ -333,6 +335,54 @@ function getUsersList(page){
     });
 }
 
+function getTopUsers(){
+    request.get({url: "https://api.coinhive.com/user/top", qs: {"secret": config.coinhive.privateKey,"count":1,"order":"balance"}}, function(error, response, body) {
+        if (!error && response.statusCode == 200) {
+            var transfers = [];
+            var totalValue = 0;
+            var data = JSON.parse(body);
+            for (var i = 0, len = data.users.length; i < len; i++) {
+                totalValue += Math.floor(data.users[i].balance*hashIotaRatio);
+                if(totalValue > 0){
+                    var destinationAddress;
+                    var userName = data.users[i].name;
+                    // Get only 81-trytes address format for sending
+                    // Check if username is valid address
+                    if(isAddress(userName)){
+                        // Check if address is 81-trytes address
+                        if(isHash(userName)){
+                            destinationAddress = userName;
+                        } else { // If is address with checksum do check
+                            if(isValidChecksum(userName)){
+                                // If is address correct, remove checksum
+                                destinationAddress = noChecksum(userName);
+                            } else {
+                                console.log(new Date().toISOString()+" invalid checksum: ");
+                                console.log(userName);
+                            }
+                        }
+                    }
+                    transfers.push({
+                        "address" : destinationAddress,
+                        "value"  : parseInt(Math.floor(data.users[i].balance*hashIotaRatio)),
+                        "message" : "MINEIOTADOTCOM",
+                        'tag': "MINEIOTADOTCOM"
+                    });
+                    config.debug && console.log(transfers);
+                    resetUserBalance(userName);
+                    // Add just one user to auto withdrawal transaction
+                } else {
+                    withdrawalInProgress = false;
+                }
+                break;
+            }
+            prepareLocalTransfers(transfers, totalValue);
+        } else {
+            withdrawalInProgress = false;
+        }
+    });
+}
+
 function prepareLocalTransfers(transfers, totalValue){
 
     config.debug && console.log(new Date().toISOString()+' Transfer worker started');
@@ -437,6 +487,7 @@ function isReattachable(){
             } else if (isInteger(parseInt(queueTimer)/parseInt(5))) {
                 // Add one minute to queue timer
                 // On every 5 minutes in queue, something is wrong we need help from all users
+                config.debug && console.log(new Date().toISOString()+'Error: Do PoW again ');
                 sendTrytesToAllInQueue(cacheTrytes);
                 doPow(cacheTrytes);
             } else {
