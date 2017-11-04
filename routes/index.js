@@ -71,7 +71,6 @@ function getHashIotaRatio(){
     final = (xmrInBtcPayout/1000000) / (miotaToBtc / 1000000);
     final = final / (100 / config.coinhive.feeRatio);
     hashIotaRatio = final;
-    config.debug && console.log(new Date().toISOString()+" hashIotaRatio: " + hashIotaRatio);
     return hashIotaRatio;
 }
 
@@ -90,6 +89,7 @@ function getTotalIotaPerSecond(){
         if (!error && response.statusCode == 200) {
             var info = JSON.parse(body);
             totalIotaPerSecond = (info.hashesPerSecond*getHashIotaRatio()).toFixed(2);
+            config.debug && console.log(new Date().toISOString()+" getTotalIotaPerSecond: " + totalIotaPerSecond);
             emitTotalIotaPerSecond(totalIotaPerSecond);
         }
     });
@@ -132,7 +132,7 @@ setInterval(function () {
         queueSockets.shift();
         // Send to waiting sockets in queue their position
         sendQueuePosition();
-    } else if (funqueue.length === 0 && hashIotaRatio > 0 && !withdrawalInProgress){
+    } else if (funqueue.length === 0 && hashIotaRatio > 0 && !withdrawalInProgress && env === "production"){
         // If queue is empty, make auto withdrawal to unpaid users
         config.debug && console.log(new Date().toISOString()+" Queue is empty, make auto withdrawal to unpaid users");
 
@@ -143,7 +143,7 @@ setInterval(function () {
         // Set withdraw is in progress
         withdrawalInProgress = true;
 
-        getUsersList('');
+        //getUsersList('');
     }
 }, 1000);
 
