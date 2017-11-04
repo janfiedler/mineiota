@@ -263,7 +263,6 @@ function getUsersList(page){
             var transfers = [];
             var totalValue = 0;
             var data = JSON.parse(body);
-            config.debug && console.log(new Date().toISOString()+" getUserList:");
             for (var i = 0, len = data.users.length; i < len; i++) {
                 totalValue += Math.floor(data.users[i].balance*hashIotaRatio);
                 var destinationAddress;
@@ -290,8 +289,9 @@ function getUsersList(page){
                     "message" : "MINEIOTADOTCOM",
                     'tag': "MINEIOTADOTCOM"
                 });
-                //resetUserBalance(userName);
+                resetUserBalance(userName);
                 // Add just one user to auto withdrawal transaction
+                config.debug && console.log(transfers);
                 break;
             }
             prepareLocalTransfers(transfers, totalValue);
