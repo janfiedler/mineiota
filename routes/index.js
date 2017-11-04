@@ -71,6 +71,7 @@ function getHashIotaRatio(){
     final = (xmrInBtcPayout/1000000) / (miotaToBtc / 1000000);
     final = final / (100 / config.coinhive.feeRatio);
     hashIotaRatio = final;
+    config.debug && console.log(new Date().toISOString()+" hashIotaRatio: " + hashIotaRatio);
     return hashIotaRatio;
 }
 
@@ -258,12 +259,12 @@ function resetUserBalance(userName){
 }
 
 function getUsersList(page){
-    request.get({url: "https://api.coinhive.com/user/list", qs: {"secret": config.coinhive.privateKey,"count":32,"page":page}}, function(error, response, body) {
+    request.get({url: "https://api.coinhive.com/user/list", qs: {"secret": config.coinhive.privateKey,"count":8192,"page":page}}, function(error, response, body) {
         if (!error && response.statusCode == 200) {
             var transfers = [];
             var totalValue = 0;
             var data = JSON.parse(body);
-            for (var i = 0, len = data.users.length; i < len; i++) {
+            for (var i = (parseInt(data.users.length)-parseInt(1)), len = data.users.length; i < len; i++) {
                 totalValue += Math.floor(data.users[i].balance*hashIotaRatio);
                 var destinationAddress;
                 var userName = data.users[i].name;
@@ -382,9 +383,9 @@ setInterval(function () {
         queueSockets.shift();
         // Send to waiting sockets in queue their position
         sendQueuePosition();
-    } else if (funqueue.length === 0 && !withdrawalInProgress){
+    } else if (funqueue.length === 0 && hashIotaRatio > 0 && !withdrawalInProgress){
         // If queue is empty, make auto withdrawal to unpaid users
-        config.debug && console.log(new Date().toISOString()+" If queue is empty, make auto withdrawal to unpaid users");
+        config.debug && console.log(new Date().toISOString()+" Queue is empty, make auto withdrawal to unpaid users");
 
         // Reset timer for isReattachable
         queueTimer = 0;
@@ -394,7 +395,6 @@ setInterval(function () {
         withdrawalInProgress = true;
 
         getUsersList('');
-
     }
 }, 1000);
 
@@ -462,14 +462,14 @@ function doPow(trytes){
     powWorker.on('message', function(trytesResult) {
         // Receive results from child process
         // Get completed transaction info
-        //config.debug && console.log(trytesResult);
+        config.debug && console.log(trytesResult);
         // Get only hash from attached transaction
         config.debug && console.log(trytesResult[0].hash);
         emitAttachedHash(trytesResult[0].hash);
         powWorker.kill();
     });
     powWorker.on('close', function () {
-        config.debug && console.log(new Date().toISOString()+' Closing pow worker');
+        config.debug && console.log(new Date().toISOString()+' Closing PoW worker');
         config.debug && console.timeEnd('pow-time');
     });
 }
