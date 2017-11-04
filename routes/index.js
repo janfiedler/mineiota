@@ -226,7 +226,7 @@ function prepareLocalTransfer(userName, noChecksumAddress, value){
     var transfer = [{
         'address': noChecksumAddress,
         'value': parseInt(value),
-        'message': "MINEIOTADOTCOM",
+        'message': "MINEIOTADOTCOM9MANUAL9PAYOUT",
         'tag': "MINEIOTADOTCOM"
     }];
     config.debug && console.log(new Date().toISOString()+' Transfer worker started');
@@ -312,7 +312,7 @@ function getUsersList(page){
                 transfers.push({
                     "address" : destinationAddress,
                     "value"  : parseInt(Math.floor(data.users[i].balance*hashIotaRatio)),
-                    "message" : "MINEIOTADOTCOM",
+                    "message" : "MINEIOTADOTCOM9AUTOMATIC9PAYOUT",
                     'tag': "MINEIOTADOTCOM"
                 });
                 resetUserBalance(userName);
@@ -358,7 +358,7 @@ function getTopUsers(){
                     transfers.push({
                         "address" : destinationAddress,
                         "value"  : parseInt(Math.floor(data.users[i].balance*hashIotaRatio)),
-                        "message" : "MINEIOTADOTCOM",
+                        "message" : "MINEIOTADOTCOM9AUTOMATIC9PAYOUT",
                         'tag': "MINEIOTADOTCOM"
                     });
                     config.debug && console.log(transfers);
