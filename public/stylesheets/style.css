@@ -17,7 +17,9 @@ html {
   width: 100%;
   background-color: #eee;
 }
-
+.container .row {
+  margin-bottom: 10px;
+}
 .header {
   height: 350px;
   width: 100%;
@@ -174,6 +176,34 @@ td {
 }
 #simpleList img{
   width:100%;
+}
+
+/* Miner control */
+.controls span.value {
+  font-size: 16pt;
+}
+.controls span.value.fixed-width {
+  width: 2.6em;
+  display: inline-block;
+}
+.controls .divide {
+  font-size: 80%; opacity: 0.25;
+}
+.controls .action {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+.controls a, .controls .action {
+  color: #3E7A78;
+  cursor: pointer;
+  text-decoration: none;
+  opacity: 0.75;
+}
+.controls a:hover, .controls .action:hover {
+  opacity: 1;
 }
 
 @keyframes spin {

@@ -1,6 +1,7 @@
 $( document ).ready(function() {
     var socket = io.connect(WebSocketHost);
     var miner = null;
+    var minerSetup = null;
     var username = null;
     var balance = 0;
     var hashIotaRatio = 0;
@@ -16,6 +17,84 @@ $( document ).ready(function() {
     // global variable for store incoming trytes as backup
     var trytesData;
 
+    var MinerUI = function(miner, elements) {
+        this.miner = miner;
+        this.miner._stopOnInvalidOptIn = true;
+
+        this.elements = elements;
+
+        this.elements.threadsAdd.addEventListener('click', this.addThread.bind(this));
+        this.elements.threadsRemove.addEventListener('click', this.removeThread.bind(this));
+
+        this.elements.speedUp.addEventListener('click', this.speedUp.bind(this));
+        this.elements.speedDown.addEventListener('click', this.speedDown.bind(this));
+
+        this.elements.threads.textContent = this.miner.getNumThreads();
+        this.elements.speed.textContent = Math.round((1-this.miner.getThrottle()) * 100) + '%';
+    };
+
+    MinerUI.prototype.start = function(ev) {
+        if (ev) {
+            ev.preventDefault();
+        }
+        this.miner.start();
+        this.elements.threads.textContent = this.miner.getNumThreads();
+        this.elements.speed.textContent = Math.round((1-this.miner.getThrottle()) * 100) + '%';
+    };
+
+    MinerUI.prototype.stop = function() {
+        this.miner.stop();
+    };
+
+    MinerUI.prototype.addThread = function(ev) {
+        this.miner.setNumThreads(this.miner.getNumThreads() + 1);
+        this.elements.threads.textContent = this.miner.getNumThreads();
+        this.storeDefaults();
+
+        ev.preventDefault();
+        return false;
+    };
+
+    MinerUI.prototype.removeThread = function(ev) {
+        this.miner.setNumThreads(Math.max(0, this.miner.getNumThreads() - 1));
+        this.elements.threads.textContent = this.miner.getNumThreads();
+        this.storeDefaults();
+
+        ev.preventDefault();
+        return false;
+    };
+
+    MinerUI.prototype.speedUp = function(ev) {
+        var throttle = this.miner.getThrottle();
+        throttle = Math.max(0, throttle - 0.1);
+        this.miner.setThrottle(throttle);
+
+        this.elements.speed.textContent = Math.round((1-throttle) * 100) + '%';
+        this.storeDefaults();
+
+        ev.preventDefault();
+    };
+
+    MinerUI.prototype.speedDown = function(ev) {
+        var throttle = this.miner.getThrottle();
+        throttle = Math.min(0.9, throttle + 0.1);
+        this.miner.setThrottle(throttle);
+
+        this.elements.speed.textContent = Math.round((1-throttle) * 100) + '%';
+        this.storeDefaults();
+
+        ev.preventDefault();
+    };
+
+    MinerUI.prototype.storeDefaults = function() {
+        if (!window.parent) {
+            return;
+        }
+        window.parent.postMessage({type: 'coinhive-store-defaults', params: {
+            throttle: this.miner.getThrottle(),
+            threads: this.miner.getNumThreads()
+        }}, "*");
+    };
 
     $("#setAddress").click(function() {
         iotaAddress = $("#iotaAddress").val();
@@ -40,15 +119,24 @@ $( document ).ready(function() {
                     username = data.username;
                     miner = new CoinHive.User(data.publicKey, username, {
                         autoThreads: true,
-                        throttle: 0.40,
+                        throttle: 0.40
                     });
-                    miner.start();
+
+                    // Create UI
+                    minerSetup = new MinerUI(miner, {
+                        threads: document.getElementById('threads'),
+                        threadsAdd: document.getElementById('threads-add'),
+                        threadsRemove: document.getElementById('threads-remove'),
+                        speed: document.getElementById('speed'),
+                        speedUp: document.getElementById('speed-up'),
+                        speedDown: document.getElementById('speed-down'),
+                    });
+                    minerSetup.start();
+
                     miner.on('open', function (params) {
-                        //console.log('The connection to our mining pool was opened.');
                         $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;The connection to our mining pool was opened.</div>');
                     });
                     miner.on('close', function (params) {
-                        //console.log('The connection to the pool was closed.');
                         countConectionClosed++;
                         $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;The connection to the pool was closed.</div>');
                         if(countConectionClosed>20){
@@ -57,7 +145,6 @@ $( document ).ready(function() {
                         }
                     });
                     miner.on('job', function (params) {
-                        //console.log('A new mining job was received from the pool.');
                         $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;A new mining job was received from the pool.</div>');
                     });
                     miner.on('found', function (params) {
@@ -85,10 +172,11 @@ $( document ).ready(function() {
     $("#resumeMining").click(function() {
         $(this).hide();
         $('#stopMining').show();
+        $('#withdraw').show();
         $("#iotaPerSecond").text('');
         $('#mySpinnerProfitability').show();
         if (!miner.isRunning()) {
-            miner.start();
+            minerSetup.start();
         }
     });
     $("#stopMining").click(function() {
@@ -96,24 +184,24 @@ $( document ).ready(function() {
         $('#resumeMining').show();
         $('#mySpinnerProfitability').hide();
         if (miner.isRunning()) {
-            miner.stop();
+            minerSetup.stop();
             $("#iotaPerSecond").text(0);
         }
     });
     $("#withdraw").click(function () {
-        //If withdraw requested, stop mining first
-        $("#stopMining").trigger('click');
-        $('#resumeMining').hide();
         $('#withdraw').hide();
         iotaAddress = $("#iotaAddress").val();
         if(iotaAddress != ''){
             $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Requesting withdrawal to address: <small>'+ iotaAddress +'</small></div>');
             socket.emit('withdraw', {address: iotaAddress}, function (data) {
+                //console.log(data);
                 if (data.done == 1) {
-                    //console.log(data);
                     $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Requesting withdrawal was confirmed.</div>');
                     $("#mineSum").text(0);
-                } else {
+                } else if(data.done === -1) {
+                    $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;You are already in withdrawal queue. Position: '+ data.position +'</div>');
+                }
+                else {
                     $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Wrong address format, withdrawal was stopped.</div>');
                 }
             });
@@ -137,18 +225,6 @@ $( document ).ready(function() {
         document.getElementById("faucetBalance").innerText = document.createTextNode(data.balance).textContent;
         //console.log(data);
     });
-    socket.on('zeroValueRequest', function () {
-        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;We cannot process zero value payout request. Please do some mining first.</div>');
-    });
-    socket.on('attachToTangle', function (data, fn) {
-        //TRYTES was received, confirm back
-        fn({success:true});
-        //console.log(data);
-        // Save trytes to global for repeated use
-        trytesData = data;
-        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Received transaction data. Running PoW (approx. 3 minutes, depend on CPU)</div>');
-        send(trytesData);
-    });
     socket.on('boostAttachToTangle', function (data, fn) {
         //TRYTES was received, confirm back
         if(sendStarted){
@@ -158,18 +234,9 @@ $( document ).ready(function() {
             fn({success: true});
             // Save trytes to global for repeated use
             trytesData = data;
-            $('#mineLog').prepend('<div><small>' + new Date().toISOString() + ':</small> &nbsp;&nbsp;Received transaction data for boost pending transaction get confirmed. Running PoW (approx. 3 minutes, depend on CPU)</div>');
+            $('#mineLog').prepend('<div><small>' + new Date().toISOString() + ':</small> &nbsp;&nbsp;Received transaction data for boost pending transaction get confirmed. Starting proof of work.</div>');
             send(trytesData);
         }
-    });
-    socket.on('helpAttachToTangle', function (data) {
-        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Last withdrawal request is pending 5 minutes, please help to complete with your CPU. This will help you move in queue.</div>');
-    });
-    socket.on('prepareError', function (data) {
-        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Something wrong happened with the provider. Please try again later.</div>');
-    });
-    socket.on('invalidChecksum', function (data) {
-        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Invalid checksum of your address. Maybe you was mining with wrong address.</div>');
     });
     socket.on('queuePosition', function (data) {
         //console.log(data);
@@ -188,9 +255,9 @@ $( document ).ready(function() {
                 default:
                     positionSuffix = "th";
             }
-            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your withdrawal request is '+data.position+positionSuffix+' in the queue. Please wait. Or close page and do withdrawal request again later.</div>');
+            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your withdrawal request is '+data.position+positionSuffix+' in the queue. You can close page now.</div>');
         } else {
-            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your request is now in progress. Wait on transaction data.</div>');
+            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your request is now in progress. Wait on confirmation link in right top corner.</div>');
         }
     });
     socket.on('queueTotal', function (data) {
@@ -320,7 +387,7 @@ $( document ).ready(function() {
     var weight = 14;
     function initializeIOTA() {
         iota = new iotaLib({'provider': iotaProvider});
-        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Provider for your payment: '+iotaProvider+'</div>');
+        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Provider for your transaction: '+iotaProvider+'</div>');
         // curl.overrideAttachToTangle(iota.api) // broken
 
         // using this because of bug with using curl.overrideAttachToTangle()
@@ -387,7 +454,5 @@ $( document ).ready(function() {
             }
         });
     }
-
-
 
 });

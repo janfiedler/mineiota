@@ -20,6 +20,7 @@ var withdrawalInProgress = false;
 var funqueue = [];
 var queueIds = [];
 var queueSockets = [];
+var queueAddresses = [];
 var minersOnline = 1;
 // Important for speed, check api getInputs
 var keyIndexStart = config.iota.keyIndexStart;
@@ -131,6 +132,8 @@ setInterval(function () {
         var queueId = queueIds.shift();
         config.debug && console.log(new Date().toISOString()+" Withdrawal in progress for "+queueId);
         queueSockets.shift();
+        // Remove used address from array (get right position in queue)
+        queueAddresses.shift();
         // Send to waiting sockets in queue their position
         sendQueuePosition();
     } else if (funqueue.length === 0 && hashIotaRatio > 0 && !withdrawalInProgress && env === "production"){
@@ -150,7 +153,7 @@ setInterval(function () {
 }, 1000);
 
 //#BLOCK TRYTES DATA WITHDRAW
-function checkIfNodeIsSynced(socket, address) {
+function checkIfNodeIsSynced(address) {
     config.debug && console.log(new Date().toISOString()+" Checking if node is synced");
 
     iota.api.getNodeInfo(function(error, success){
@@ -159,7 +162,7 @@ function checkIfNodeIsSynced(socket, address) {
             config.debug && console.log(error);
             setTimeout(function(){
                 //If node is not synced try it again after timeout
-                checkIfNodeIsSynced(socket, address);
+                checkIfNodeIsSynced(address);
             }, 1000);
         }
 
@@ -172,16 +175,15 @@ function checkIfNodeIsSynced(socket, address) {
 
         if(isNodeSynced) {
             config.debug && console.log(new Date().toISOString()+" Node is synced");
-            getUserBalance(socket, address);
+            getUserBalance(address);
         } else {
             config.debug && console.log(new Date().toISOString()+" Node is not synced.");
-            socket.emit("prepareError", '');
             withdrawalInProgress = false;
         }
     })
 }
 
-function getUserBalance(socket, address){
+function getUserBalance(address){
     request.get({url: "https://api.coinhive.com/user/balance", qs: {"secret": config.coinhive.privateKey, "name":address}}, function(error, response, body) {
         if (!error && response.statusCode == 200) {
             config.debug && console.log(body);
@@ -205,15 +207,13 @@ function getUserBalance(socket, address){
                         } else {
                             config.debug && console.log(new Date().toISOString()+" Invalid address checksum:");
                             config.debug && console.log(address);
-                            socket.emit("invalidChecksum", "");
                             withdrawalInProgress = false;
                         }
                     }
                 }
 
-                prepareLocalTransfer(socket, address, noChecksumAddress, valuePayout);
+                prepareLocalTransfer(address, noChecksumAddress, valuePayout);
             } else {
-                socket.emit("zeroValueRequest", "");
                 withdrawalInProgress = false;
             }
         } else {
@@ -222,7 +222,7 @@ function getUserBalance(socket, address){
     });
 }
 
-function prepareLocalTransfer(socket, userName, noChecksumAddress, value){
+function prepareLocalTransfer(userName, noChecksumAddress, value){
     var transfer = [{
         'address': noChecksumAddress,
         'value': parseInt(value),
@@ -235,7 +235,6 @@ function prepareLocalTransfer(socket, userName, noChecksumAddress, value){
     var transferWorker = cp.fork('workers/transfer.js');
 
     transferWorker.send({keyIndex:keyIndexStart});
-    //transferWorker.send({totalValue:value});
     transferWorker.send({totalValue:parseInt(value)});
     transferWorker.send(transfer);
 
@@ -248,12 +247,6 @@ function prepareLocalTransfer(socket, userName, noChecksumAddress, value){
             //cacheTrytes is set, reset user balance on coinhive.com
             resetUserBalance(userName);
             doPow(cacheTrytes);
-            socket.emit("attachToTangle", cacheTrytes, function(confirmation){
-                if(confirmation.success == true){
-                    // Maybe use in future, true or false never happened if user is already disconnected
-                }
-            });
-
             //We store actual keyIndex for next faster search and transaction
             if(typeof result.keyIndex !== 'undefined'){
                 keyIndexStart = result.keyIndex;
@@ -269,7 +262,6 @@ function prepareLocalTransfer(socket, userName, noChecksumAddress, value){
 
         } else if (result.status == "error"){
             config.debug && console.log(result.result);
-            socket.emit("prepareError", result.result);
             // We are done, next in queue can go
             withdrawalInProgress = false;
         }
@@ -343,7 +335,7 @@ function getTopUsers(){
             var data = JSON.parse(body);
             for (var i = 0, len = data.users.length; i < len; i++) {
                 totalValue += Math.floor(data.users[i].balance*hashIotaRatio);
-                console.log(new Date().toISOString()+" Total value auto withdrawal "+totalValue);
+                console.log(new Date().toISOString()+" Total value auto withdrawal "+totalValue + " / " + config.automaticWithdrawalMinimumAmount);
                 if(totalValue > config.automaticWithdrawalMinimumAmount){
                     var destinationAddress;
                     var userName = data.users[i].name;
@@ -430,25 +422,6 @@ function prepareLocalTransfers(transfers, totalValue){
     });
 }
 
-function sendTrytesToAllInQueue(trytes){
-    if(queueSockets != undefined ) {
-        if(queueSockets.length > 0){
-            queueSockets.forEach(function (queueSocket){
-                queueSocket.emit("helpAttachToTangle", '');
-                queueSocket.emit("boostAttachToTangle", trytes, function(confirmation){
-                    if(confirmation.success == true){
-                        config.debug && console.log(new Date().toISOString()+ " "+queueSocket.id+' emit helpAttachToTangle to client success');
-                    } else {
-                       // If user already disconnected never notice
-                    }
-                });
-            });
-        } else if (queueSockets.length == 0) {
-            config.debug && console.log(new Date().toISOString()+' Pending transaction, but nobody in queue to help with boost');
-        }
-    }
-}
-
 function sendQueuePosition(){
     if(queueSockets !== undefined ) {
         queueSockets.forEach(function (queueSocket){
@@ -488,9 +461,8 @@ function isReattachable(){
                 inputAddressConfirm = null;
             } else if (isInteger(parseInt(queueTimer)/parseInt(5))) {
                 // Add one minute to queue timer
-                // On every 5 minutes in queue, something is wrong we need help from all users
-                config.debug && console.log(new Date().toISOString()+'Error: Do PoW again ');
-                sendTrytesToAllInQueue(cacheTrytes);
+                // On every 5 minutes in queue, sdo PoW again
+                config.debug && console.log(new Date().toISOString()+' Failed: Do PoW again ');
                 doPow(cacheTrytes);
             } else {
                 config.debug && console.log(new Date().toISOString()+' Miners online: '+sockets.length);
@@ -597,7 +569,6 @@ io.on('connection', function (socket) {
     // On disconnect remove socket from array sockets
     socket.on('disconnect', function(){
         var i = sockets.indexOf(socket);
-        config.debug && console.log(new Date().toISOString()+" Disconnected: " + socket.id);
         if(i != -1) {
             sockets.splice(i, 1);
         }
@@ -615,29 +586,35 @@ io.on('connection', function (socket) {
 
     //When user with request withdraw
     socket.on('withdraw', function(data, fn) {
-        config.debug && console.log("Requesting withdraw for socket: " + socket.id);
         var fullAddress = data.address;
-
+        config.debug && console.log("Requesting withdraw for address: " + fullAddress);
         if(isAddress(fullAddress)){
-            //Add withdraw request to queue
-            function withdrawRequest() { checkIfNodeIsSynced(socket, fullAddress); }
-            // Respond success
-            fn({done:1});
-            // Push function checkIfNodeIsSynced to array
-            funqueue.push(withdrawRequest);
-            // Push socket id to array for get position in queue
-            queueIds.push(socket.id);
-            // Push full socket to array
-            queueSockets.push(socket);
-            // Send to client position in queue
-            config.debug && console.log(fullAddress+" is in queue " + (parseInt(queueIds.indexOf(socket.id))+parseInt(1)));
-            socket.emit('queuePosition', {position: (parseInt(queueIds.indexOf(socket.id))+parseInt(1))});
+            // Check if withdrawal request inst already in queue
+            if(queueAddresses.indexOf(fullAddress) >= 0){
+                fn({done:-1,position:(parseInt(queueAddresses.indexOf(fullAddress))+parseInt(1))});
+            } else {
+                //Add withdraw request to queue
+                function withdrawRequest() { checkIfNodeIsSynced(fullAddress); }
+                // Respond success
+                fn({done:1});
+                // Push function checkIfNodeIsSynced to array
+                funqueue.push(withdrawRequest);
+                // Push socket id to array for get position in queue
+                queueIds.push(socket.id);
+                // Push full socket to array
+                queueSockets.push(socket);
+                // Push address to array
+                queueAddresses.push(fullAddress);
+                // Send to client position in queue
+                config.debug && console.log(fullAddress+" is in queue " + (parseInt(queueIds.indexOf(socket.id))+parseInt(1)));
+                socket.emit('queuePosition', {position: (parseInt(queueIds.indexOf(socket.id))+parseInt(1))});
+            }
         } else {
             // Respond error
             fn({done:0});
         }
     });
-    //When user complete withdrawal, send last payout to all clients
+    //When user complete boost PoW, send hash transaction to all clients
     socket.on('newWithdrawalConfirmation', function (data) {
         emitAttachedHash(data.hash);
     });
