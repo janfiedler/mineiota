@@ -143,7 +143,7 @@ setInterval(function () {
         // Set withdraw is in progress
         withdrawalInProgress = true;
 
-        //getUsersList('');
+        getUsersList('');
     }
 }, 1000);
 
