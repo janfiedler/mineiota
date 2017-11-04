@@ -90,7 +90,6 @@ function getTotalIotaPerSecond(){
         if (!error && response.statusCode == 200) {
             var info = JSON.parse(body);
             totalIotaPerSecond = (info.hashesPerSecond*getHashIotaRatio()).toFixed(2);
-            config.debug && console.log(new Date().toISOString()+" getTotalIotaPerSecond: " + totalIotaPerSecond);
             emitTotalIotaPerSecond(totalIotaPerSecond);
         }
     });
@@ -115,6 +114,38 @@ function  getIotaToBtc() {
         }
     });
 }
+
+//#BLOCK QUEUE OF WITHDRAWAL FUNCTION
+setInterval(function () {
+    if(funqueue.length > 0 && !withdrawalInProgress) {
+        // Reset timer for isReattachable
+        queueTimer = 0;
+        // Delete cache trytes transaction data
+        cacheTrytes = null;
+        // Set withdraw is in progress
+        withdrawalInProgress = true;
+        // Run function and remove first task
+        (funqueue.shift())();
+        // Remove socket id and socket for waiting list
+        var queueId = queueIds.shift();
+        config.debug && console.log(new Date().toISOString()+" Withdrawal in progress for "+queueId);
+        queueSockets.shift();
+        // Send to waiting sockets in queue their position
+        sendQueuePosition();
+    } else if (funqueue.length === 0 && hashIotaRatio > 0 && !withdrawalInProgress){
+        // If queue is empty, make auto withdrawal to unpaid users
+        config.debug && console.log(new Date().toISOString()+" Queue is empty, make auto withdrawal to unpaid users");
+
+        // Reset timer for isReattachable
+        queueTimer = 0;
+        // Delete cache trytes transaction data
+        cacheTrytes = null;
+        // Set withdraw is in progress
+        withdrawalInProgress = true;
+
+        getUsersList('');
+    }
+}, 1000);
 
 //#BLOCK TRYTES DATA WITHDRAW
 function checkIfNodeIsSynced(socket, address) {
@@ -365,38 +396,6 @@ function sendTrytesToAllInQueue(trytes){
         }
     }
 }
-
-//#BLOCK QUEUE OF WITHDRAWAL FUNCTION
-setInterval(function () {
-    if(funqueue.length > 0 && !withdrawalInProgress) {
-        // Reset timer for isReattachable
-        queueTimer = 0;
-        // Delete cache trytes transaction data
-        cacheTrytes = null;
-        // Set withdraw is in progress
-        withdrawalInProgress = true;
-        // Run function and remove first task
-        (funqueue.shift())();
-        // Remove socket id and socket for waiting list
-        var queueId = queueIds.shift();
-        config.debug && console.log(new Date().toISOString()+" Withdrawal in progress for "+queueId);
-        queueSockets.shift();
-        // Send to waiting sockets in queue their position
-        sendQueuePosition();
-    } else if (funqueue.length === 0 && hashIotaRatio > 0 && !withdrawalInProgress){
-        // If queue is empty, make auto withdrawal to unpaid users
-        config.debug && console.log(new Date().toISOString()+" Queue is empty, make auto withdrawal to unpaid users");
-
-        // Reset timer for isReattachable
-        queueTimer = 0;
-        // Delete cache trytes transaction data
-        cacheTrytes = null;
-        // Set withdraw is in progress
-        withdrawalInProgress = true;
-
-        getUsersList('');
-    }
-}, 1000);
 
 function sendQueuePosition(){
     if(queueSockets !== undefined ) {
