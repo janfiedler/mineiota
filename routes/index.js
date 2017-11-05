@@ -464,13 +464,22 @@ function isReattachable(){
                 // On every 5 minutes in queue, sdo PoW again
                 config.debug && console.log(new Date().toISOString()+' Failed: Do PoW again ');
                 doPow(cacheTrytes);
-            } else {
-                config.debug && console.log(new Date().toISOString()+' Miners online: '+sockets.length);
-                config.debug && console.log(new Date().toISOString()+' Actual queue run for minutes: '+queueTimer);
-                config.debug && console.log(new Date().toISOString()+' Transactions in queue: '+funqueue.length);
-                config.debug && console.log(new Date().toISOString()+' Waiting on transaction confirmation: ' + inputAddressConfirm);
+            }   else if (parseInt(queueTimer) >= parseInt(30) && parseInt(funqueue.length) > 0) {
+                // In transaction is not confirmed after 30 minutes, skipping to the next in queue
+                config.debug && console.log(new Date().toISOString() + 'Error: Transaction is not confirmed after 30 minutes, skipping to the next in queue');
+                withdrawalInProgress = false;
+                queueTimer = 0;
+                inputAddressConfirm = null;
+                // STOP with setInterval until is called again
+                clearInterval(waitConfirm);
             }
-        });
+            else {
+                    config.debug && console.log(new Date().toISOString()+' Miners online: '+sockets.length);
+                    config.debug && console.log(new Date().toISOString()+' Actual queue run for minutes: '+queueTimer);
+                    config.debug && console.log(new Date().toISOString()+' Transactions in queue: '+funqueue.length);
+                    config.debug && console.log(new Date().toISOString()+' Waiting on transaction confirmation: ' + inputAddressConfirm);
+                }
+            });
     }
 }
 
