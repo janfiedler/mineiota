@@ -459,12 +459,12 @@ function isReattachable(){
                 cacheTrytes = null;
                 queueTimer = 0;
                 inputAddressConfirm = null;
-            } else if (isInteger(parseInt(queueTimer)/parseInt(5))) {
+            } else if (isInteger(parseInt(queueTimer)/parseInt(10))) {
                 // Add one minute to queue timer
                 // On every 5 minutes in queue, sdo PoW again
                 config.debug && console.log(new Date().toISOString()+' Failed: Do PoW again ');
                 doPow(cacheTrytes);
-            }   else if (parseInt(queueTimer) >= parseInt(30) && parseInt(funqueue.length) > 0) {
+            }   else if (parseInt(queueTimer) >= parseInt(40) && parseInt(funqueue.length) > 0) {
                 // In transaction is not confirmed after 30 minutes, skipping to the next in queue
                 config.debug && console.log(new Date().toISOString() + 'Error: Transaction is not confirmed after 30 minutes, skipping to the next in queue');
                 withdrawalInProgress = false;
