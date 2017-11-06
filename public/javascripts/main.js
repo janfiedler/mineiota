@@ -214,11 +214,11 @@ $( document ).ready(function() {
         socket.emit('boostRequest', '');
     });
 
-    function emitPayout(payoutHash){
-        socket.emit('newWithdrawalConfirmation', {hash: payoutHash});
+    function emitPayout(bundle){
+        socket.emit('newWithdrawalConfirmation', {bundle: bundle});
     }
     socket.on('lastPayout', function (data) {
-        $('#lastPayout').html('<small>'+new Date().toISOString()+'<a href="https://thetangle.org/transaction/'+data.hash+'" target="_blank">...'+data.hash.substring(20,40)+'... </a></small>');
+        $('#lastPayout').html('<small>'+new Date().toISOString()+'<a href="https://thetangle.org/bundle/'+data.bundle+'" target="_blank">...'+data.bundle.substring(20,40)+'... </a></small>');
     });
     socket.on('balance', function (data) {
         balance = data.balance;
@@ -442,14 +442,12 @@ $( document ).ready(function() {
                 return
             } else {
                 $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Reward was sent to address, feel free check transaction detail.</div>');
-                var theTangleOrgUrl = 'https://thetangle.org/transaction/'+success[0].hash;
-                var iotaSearchChUrl = 'https://iotasear.ch/hash/'+success[0].hash;
-                $('#mineLog').prepend('<div><small>'+new Date().toISOString()+': &nbsp;&nbsp;<a href="'+iotaSearchChUrl+'" target="_blank">'+iotaSearchChUrl+'</a></small></div>');
+                var theTangleOrgUrl = 'https://thetangle.org/bundle/'+success[0].bundle;
                 $('#mineLog').prepend('<div><small>'+new Date().toISOString()+': &nbsp;&nbsp;<a href="'+theTangleOrgUrl+'" target="_blank">'+theTangleOrgUrl+'</a></small></div>');
                 //After withdrawal process is done, can start again.
                 $('#withdraw').show();
                 $('#resumeMining').show();
-                emitPayout(success[0].hash);
+                emitPayout(success[0].bundle);
                 // Send joby is done
                 sendStarted = false;
             }

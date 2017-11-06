@@ -499,7 +499,7 @@ function doPow(trytes){
         //config.debug && console.log(trytesResult);
         // Get only hash from attached transaction
         config.debug && console.log("Success: bundle from attached transactions " + trytesResult[0].bundle);
-        emitAttachedHash(trytesResult[0].bundle);
+        emitAttachedBundle(trytesResult[0].bundle);
         powWorker.kill();
     });
     powWorker.on('close', function () {
@@ -626,7 +626,7 @@ io.on('connection', function (socket) {
     });
     //When user complete boost PoW, send hash transaction to all clients
     socket.on('newWithdrawalConfirmation', function (data) {
-        emitAttachedHash(data.hash);
+        emitAttachedBundle(data.bundle);
     });
     socket.on('boostRequest', function () {
         socket.emit('announcement', "Boost is disabled. Thank you for your help");
@@ -661,10 +661,10 @@ function emitTotalIotaPerSecond(count){
     }
 }
 // Emit hash of attached transaction
-function emitAttachedHash(hash){
+function emitAttachedBundle(bundle){
     if(sockets != undefined ) {
         sockets.forEach(function (socketSingle){
-            socketSingle.emit('lastPayout', {hash: hash});
+            socketSingle.emit('lastPayout', {bundle: bundle});
         });
     }
 }
