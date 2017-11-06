@@ -3,6 +3,7 @@ var config = {
         debug: true,
         port: 3000,
         url: 'http://127.0.0.1',
+        automaticWithdrawalMinimumAmount: 1000,
         // IOTA Provider details
         iota: {
             host:   'https://yournode.com',
@@ -28,6 +29,7 @@ var config = {
         debug: false,
         port: 3000,
         url: 'https://yourwebsite.com',
+        automaticWithdrawalMinimumAmount: 1000,
         // IOTA Provider details
         iota: {
             host:   'https://yournode.com',
