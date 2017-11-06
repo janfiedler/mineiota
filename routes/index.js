@@ -136,7 +136,7 @@ setInterval(function () {
         queueAddresses.shift();
         // Send to waiting sockets in queue their position
         sendQueuePosition();
-    } else if (funqueue.length === 0 && hashIotaRatio > 0 && !withdrawalInProgress && env === "production"){
+    } else if (funqueue.length === 0 && balance > 0 && hashIotaRatio > 0 && !withdrawalInProgress && env === "production"){
         // If queue is empty, make auto withdrawal to unpaid users
         config.debug && console.log(new Date().toISOString()+" Queue is empty, make auto withdrawal to unpaid users");
 
