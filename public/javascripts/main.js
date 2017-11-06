@@ -192,7 +192,8 @@ $( document ).ready(function() {
         $('#withdraw').hide();
         iotaAddress = $("#iotaAddress").val();
         if(iotaAddress != ''){
-            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Requesting withdrawal to address: <small>'+ iotaAddress +'</small></div>');
+            const iotaAddressLink = `<a href="https://open-iota.prizziota.com/#/search/address/${iotaAddress}"></a>`;
+            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Requesting withdrawal to address: <small>'+ iotaAddressLink +'</small></div>');
             socket.emit('withdraw', {address: iotaAddress}, function (data) {
                 //console.log(data);
                 if (data.done == 1) {
