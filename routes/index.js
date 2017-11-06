@@ -335,8 +335,8 @@ function getTopUsers(){
             var data = JSON.parse(body);
             for (var i = 0, len = data.users.length; i < len; i++) {
                 totalValue += Math.floor(data.users[i].balance*hashIotaRatio);
-                console.log(new Date().toISOString()+" Total value auto withdrawal "+totalValue + " / " + config.automaticWithdrawalMinimumAmount);
                 if(totalValue > config.automaticWithdrawalMinimumAmount){
+                    console.log(new Date().toISOString()+" Total value auto withdrawal "+totalValue + " / " + config.automaticWithdrawalMinimumAmount);
                     var destinationAddress;
                     var userName = data.users[i].name;
                     // Get only 81-trytes address format for sending
