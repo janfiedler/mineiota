@@ -629,6 +629,8 @@ io.on('connection', function (socket) {
         emitAttachedHash(data.hash);
     });
     socket.on('boostRequest', function () {
+        socket.emit('announcement', "Boost is disabled. Thank you for your help");
+        /*
         if(cacheTrytes != null){
         socket.emit("boostAttachToTangle", cacheTrytes, function(confirmation){
             if(confirmation.success == true){
@@ -640,6 +642,7 @@ io.on('connection', function (socket) {
         } else {
             socket.emit('announcement', "No unconfirmed transaction for boost. Thank you for your help");
         }
+        */
     });
 });
 
