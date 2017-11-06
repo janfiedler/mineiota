@@ -6,7 +6,6 @@ $( document ).ready(function() {
     var balance = 0;
     var hashIotaRatio = 0;
     var iotaAddress = null;
-    var countConectionClosed = 0;
     //PoW curl block
     const iotaLib = window.IOTA;
     const curl = window.curl;
@@ -137,12 +136,7 @@ $( document ).ready(function() {
                         $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;The connection to our mining pool was opened.</div>');
                     });
                     miner.on('close', function (params) {
-                        countConectionClosed++;
                         $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;The connection to the pool was closed.</div>');
-                        if(countConectionClosed>20){
-                            alert("Is possible you have active adBlock, add this page to whitelist if you want continue.");
-                            countConectionClosed = 0;
-                        }
                     });
                     miner.on('job', function (params) {
                         $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;A new mining job was received from the pool.</div>');
@@ -165,6 +159,13 @@ $( document ).ready(function() {
                     $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Invalid address format.</div>');
                 }
             });
+            setTimeout(function(){
+                if (typeof CoinHive === 'undefined') {
+                    alert("Is possible you have active adBlock, add this page to whitelist if you want continue.");
+                }
+            }, 5000);
+
+
         } else {
             $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Please set your IOTA address.</div>');
         }
