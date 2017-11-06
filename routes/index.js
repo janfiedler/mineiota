@@ -498,8 +498,8 @@ function doPow(trytes){
         // Get completed transaction info
         //config.debug && console.log(trytesResult);
         // Get only hash from attached transaction
-        config.debug && console.log("Success: hash from attached transaction " + trytesResult[0].hash);
-        emitAttachedHash(trytesResult[0].hash);
+        config.debug && console.log("Success: bundle from attached transactions " + trytesResult[0].bundle);
+        emitAttachedHash(trytesResult[0].bundle);
         powWorker.kill();
     });
     powWorker.on('close', function () {
