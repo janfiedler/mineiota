@@ -365,6 +365,7 @@ function getTopUsers(){
                     resetUserBalance(userName);
                     // Add just one user to auto withdrawal transaction
                 } else {
+                    console.log(new Date().toISOString()+" No one with minimum payout amount " + config.automaticWithdrawalMinimumAmount);
                     withdrawalInProgress = false;
                     return;
                 }
