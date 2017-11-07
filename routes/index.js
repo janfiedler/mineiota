@@ -178,7 +178,10 @@ function checkIfNodeIsSynced(address) {
             getUserBalance(address);
         } else {
             config.debug && console.log(new Date().toISOString()+" Node is not synced.");
-            withdrawalInProgress = false;
+            setTimeout(function(){
+                //If node is not synced try it again after timeout
+                checkIfNodeIsSynced(address);
+            }, 5000);
         }
     })
 }
