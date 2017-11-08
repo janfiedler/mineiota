@@ -133,21 +133,26 @@ setInterval(function () {
         // Set withdraw is in progress
         withdrawalInProgress = true;
 
-        getTopUsers();
+        getTopUsers(config.outputsInTransaction);
     }
 }, 1000);
 
 function getUserForPayout(){
-    if(queueAddresses.length > 0 && countUsersForPayout < config.outputsInTransaction){
+    if(queueAddresses.length > 0 && countUsersForPayout < config.outputsInTransaction) {
         countUsersForPayout++;
         // Remove socket id and socket for waiting list
         var queueId = queueIds.shift();
-        config.debug && console.log(new Date().toISOString()+" Withdrawal in progress for "+queueId);
+        config.debug && console.log(new Date().toISOString() + " Withdrawal in progress for " + queueId);
         var socket = queueSockets.shift();
         // Remove used address from array (get right position in queue)
         var userName = queueAddresses.shift();
 
         getUserBalance(socket, userName);
+    } else if(queueAddresses.length === 0 && countUsersForPayout < config.outputsInTransaction){
+        var outputsTransactionLeft = parseInt(config.outputsInTransaction) - parseInt(countUsersForPayout);
+        if(outputsTransactionLeft > 0){
+            getTopUsers(outputsTransactionLeft);
+        }
     } else {
         // Send to waiting sockets in queue their position
         sendQueuePosition();
@@ -221,8 +226,8 @@ function getUserBalance(socket, address){
 
 }
 
-function getTopUsers(){
-    request.get({url: "https://api.coinhive.com/user/top", qs: {"secret": config.coinhive.privateKey,"count":config.outputsInTransaction,"order":"balance"}}, function(error, response, body) {
+function getTopUsers(count){
+    request.get({url: "https://api.coinhive.com/user/top", qs: {"secret": config.coinhive.privateKey,"count":count,"order":"balance"}}, function(error, response, body) {
         if (!error && response.statusCode == 200) {
             var data = JSON.parse(body);
             for (var i = 0, len = data.users.length; i < len; i++) {
