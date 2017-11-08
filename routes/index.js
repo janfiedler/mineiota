@@ -237,30 +237,42 @@ function getTopUsers(count){
                     if(valuePayout > 0){
                         var destinationAddress;
                         var userName = data.users[i].name;
-                        // Get only 81-trytes address format for sending
-                        // Check if username is valid address
-                        if(isAddress(userName)){
-                            // Check if address is 81-trytes address
-                            if(isHash(userName)){
-                                destinationAddress = userName;
-                            } else { // If is address with checksum do check
-                                if(isValidChecksum(userName)){
-                                    // If is address correct, remove checksum
-                                    destinationAddress = noChecksum(userName);
-                                } else {
-                                    console.log(new Date().toISOString()+" invalid checksum: ");
-                                    console.log(userName);
+                        var skipDuplicate = false;
+                        // If getTopUsers fill rest of space for manual payments, checking for duplicate
+                        if(count < config.outputsInTransaction){
+                            cacheResetUsersBalance.forEach(function(user) {
+                                if(user.name === userName){
+                                    console.log(new Date().toISOString()+" Duplicate payout in cacheResetUsersBalance!");
+                                    skipDuplicate = true;
+                                }
+                            });
+                        }
+                        if(!skipDuplicate){
+                            // Get only 81-trytes address format for sending
+                            // Check if username is valid address
+                            if(isAddress(userName)){
+                                // Check if address is 81-trytes address
+                                if(isHash(userName)){
+                                    destinationAddress = userName;
+                                } else { // If is address with checksum do check
+                                    if(isValidChecksum(userName)){
+                                        // If is address correct, remove checksum
+                                        destinationAddress = noChecksum(userName);
+                                    } else {
+                                        console.log(new Date().toISOString()+" invalid checksum: ");
+                                        console.log(userName);
+                                    }
                                 }
                             }
+                            cacheTransfers.push({
+                                "address" : destinationAddress,
+                                "value"  : parseInt(valuePayout),
+                                "message" : "MINEIOTADOTCOM9AUTOMATIC9PAYOUT",
+                                'tag': "MINEIOTADOTCOM"
+                            });
+                            //When transaction is confirmed, reset coinhive balance
+                            cacheResetUsersBalance.push({"name":userName,"amount":data.users[i].balance});
                         }
-                        cacheTransfers.push({
-                            "address" : destinationAddress,
-                            "value"  : parseInt(valuePayout),
-                            "message" : "MINEIOTADOTCOM9AUTOMATIC9PAYOUT",
-                            'tag': "MINEIOTADOTCOM"
-                        });
-                        //When transaction is confirmed, reset coinhive balance
-                        cacheResetUsersBalance.push({"name":userName,"amount":data.users[i].balance});
                     } else {
                         console.log(new Date().toISOString()+" User without balance for payout!");
                         break;
