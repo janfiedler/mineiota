@@ -445,42 +445,35 @@ function resetPayout(){
 
 function callPoW(){
     if(env === "production"){
-        doPow(cacheTrytes);
+        checkNodeLatestMilestone();
     } else {
         emitToAll('boostAttachToTangle', cacheTrytes);
     }
 }
 function doPow(trytes){
-    if(checkNodeLatestMilestone()){
-        config.debug && console.log(new Date().toISOString()+" PoW worker started");
-        config.debug && console.time('pow-time');
-        // Worker for get IOTA balance in interval
-        var powWorker = cp.fork('workers/pow.js');
-        // Send child process work to get IOTA balance
-        //We pass to worker keyIndex where start looking for funds
-        powWorker.send({trytes:trytes});
+    config.debug && console.log(new Date().toISOString()+" PoW worker started");
+    config.debug && console.time('pow-time');
+    // Worker for get IOTA balance in interval
+    var powWorker = cp.fork('workers/pow.js');
+    // Send child process work to get IOTA balance
+    //We pass to worker keyIndex where start looking for funds
+    powWorker.send({trytes:trytes});
 
-        powWorker.on('message', function(trytesResult) {
-            // Receive results from child process
-            // Get completed transaction info
-            //config.debug && console.log(trytesResult);
-            // Get only hash from attached transaction
-            cacheBundle = trytesResult[0].bundle;
-            config.debug && console.log("Success: bundle from attached transactions " + cacheBundle);
-            powWorker.kill();
-        });
-        powWorker.on('close', function () {
-            config.debug && console.log(new Date().toISOString()+' Closing PoW worker');
-            config.debug && console.timeEnd('pow-time');
-            queueTimer = 0;
-            emitToAll('lastPayout', {bundle: cacheBundle});
-        });
-    } else {
-        setTimeout(function(){
-            //If node is not synced try it again after timeout
-            doPow(cacheTrytes);
-        }, 5000);
-    }
+    powWorker.on('message', function(trytesResult) {
+        // Receive results from child process
+        // Get completed transaction info
+        //config.debug && console.log(trytesResult);
+        // Get only hash from attached transaction
+        cacheBundle = trytesResult[0].bundle;
+        config.debug && console.log("Success: bundle from attached transactions " + cacheBundle);
+        powWorker.kill();
+    });
+    powWorker.on('close', function () {
+        config.debug && console.log(new Date().toISOString()+' Closing PoW worker');
+        config.debug && console.timeEnd('pow-time');
+        queueTimer = 0;
+        emitToAll('lastPayout', {bundle: cacheBundle});
+    });
 }
 
 function checkNodeLatestMilestone(){
@@ -501,10 +494,12 @@ function checkNodeLatestMilestone(){
 
         if(isNodeSynced) {
             config.debug && console.log(new Date().toISOString()+" Node is synced");
-            return true;
+            doPow(cacheTrytes);
         } else {
             config.debug && console.log(new Date().toISOString()+" Node is not synced.");
-            return false;
+            setTimeout(function(){
+                checkNodeLatestMilestone();
+            }, 5000);
         }
     });
 }
