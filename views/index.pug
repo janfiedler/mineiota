@@ -25,13 +25,13 @@ block content
               h2.form-signin-heading Please set your address
               ul.warningList
                   li Request withdrawal any time when mining, you will be added to queue. This withdrawal have primary priority.
-                  li When is queue empty, next payout is automatic choose from balance database. (Minimum 1000 iota)
+                  li When is queue empty, next payout is automatic choose from balance database.
               form
                 div.row
                   div.col-md-10
                     div.input-group.mb-2.mr-sm-2.mb-sm-0
                       div.input-group-addon IOTA Address
-                      input.form-control#iotaAddress(type='text',placeholder='Please be cautious when using the same address multiple times')
+                      input.form-control#iotaAddress(type='text',placeholder='You can use same address until send funds to another address')
                   div.col-md-2
                     button.btn.btn-outline-secondary#setAddress(type='button') Submit
                     i.spinner#mySpinner
