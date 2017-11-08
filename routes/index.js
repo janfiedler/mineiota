@@ -195,7 +195,7 @@ function getUserBalance(socket, address){
                     cacheTransfers.push({
                         "address" : destinationAddress,
                         "value"  : parseInt(valuePayout),
-                        "message" : "MINEIOTADOTCOM9AUTOMATIC9PAYOUT",
+                        "message" : "MINEIOTADOTCOM9MANUAL9PAYOUT",
                         'tag': "MINEIOTADOTCOM"
                     });
                     //When transaction is confirmed, reset coinhive balance
