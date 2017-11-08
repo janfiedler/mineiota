@@ -65,8 +65,6 @@ setInterval(function () {
     getIotaToBtc();
     // Get actual iota/s speed
     getTotalIotaPerSecond();
-    // Send actual queue
-    sendQueuePosition();
 }, 60000);
 
 // #BLOCK GET ALL NEEDED DATA FOR CALCULATE PAYOUT
@@ -140,7 +138,6 @@ setInterval(function () {
 }, 1000);
 
 function getUserForPayout(){
-
     if(queueAddresses.length > 0 && countUsersForPayout < config.outputsInTransaction){
         countUsersForPayout++;
         // Remove socket id and socket for waiting list
@@ -151,10 +148,9 @@ function getUserForPayout(){
         var userName = queueAddresses.shift();
 
         getUserBalance(socket, userName);
-
+    } else {
         // Send to waiting sockets in queue their position
         sendQueuePosition();
-    } else {
         //No more addresses in queue or max countUsersForPayout, lets preprepareLocalTransfersp
         config.debug && console.log(cacheTransfers);
         console.log("getUserForPayout total amount for prepareLocalTransfers : " + cacheTotalValue);
@@ -604,6 +600,8 @@ io.on('connection', function (socket) {
                 // Send to client position in queue
                 config.debug && console.log(fullAddress+" is in queue " + (parseInt(queueIds.indexOf(socket.id))+parseInt(1)));
                 socket.emit('queuePosition', {position: (parseInt(queueIds.indexOf(socket.id))+parseInt(1))});
+                // Now update queue position for all users
+                sendQueuePosition();
             }
         } else {
             // Respond error
