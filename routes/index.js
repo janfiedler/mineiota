@@ -364,11 +364,9 @@ function isReattachable(){
                 });
                 // Get and emit new balance after transaction confirmation
                 getBalance();
-                // Wait on resetting user balance, before start new withdrawal
-                setTimeout(function(){
-                    // We are done, unset the cache values
-                    resetPayout();
-                }, 5000);
+
+                // We are done, unset the cache values
+                resetPayout();
 
             }   else if (parseInt(queueTimer) >= parseInt(60) && parseInt(queueAddresses.length) > 0) {
                 // In transaction is not confirmed after 30 minutes, skipping to the next in queue
