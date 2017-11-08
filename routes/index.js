@@ -9,7 +9,6 @@ var env = process.env.NODE_ENV || 'development';
 var config = require('../config')[env];
 
 var sockets = [];
-var balance = 0;
 var xmrToBtc = 0;
 var miotaToBtc = 0;
 var payoutPer1MHashes = 0;
@@ -17,15 +16,20 @@ var hashIotaRatio = 0;
 var totalIotaPerSecond = 0;
 var final = 0;
 var withdrawalInProgress = false;
-var funqueue = [];
+var balanceInProgress = false;
 var queueIds = [];
 var queueSockets = [];
 var queueAddresses = [];
-var minersOnline = 1;
+var countUsersForPayout = 0;
 // Important for speed, check api getInputs
 var keyIndexStart = config.iota.keyIndexStart;
-// cacheTrytes transaction data
+// cache global data
+var cacheBalance = 0;
+var cacheResetUsersBalance = [];
 var cacheTrytes;
+var cacheBundle;
+var cacheTransfers = [];
+var cacheTotalValue = 0;
 // Count loops in queue
 var queueTimer = 0;
 
@@ -50,6 +54,7 @@ var iota = new IOTA({
 
 // Init
 // Request on startup
+getBalance();
 getPayoutPer1MHashes();
 getXmrToBtc();
 getIotaToBtc();
@@ -58,7 +63,7 @@ setInterval(function () {
     getPayoutPer1MHashes();
     getXmrToBtc();
     getIotaToBtc();
-    // Emit actual iota/s speed
+    // Get actual iota/s speed
     getTotalIotaPerSecond();
     // Send actual queue
     sendQueuePosition();
@@ -92,7 +97,6 @@ function getTotalIotaPerSecond(){
             totalIotaPerSecond = (info.hashesPerSecond*getHashIotaRatio()).toFixed(2);
             config.debug && console.log(new Date().toISOString()+" getTotalIotaPerSecond: " + totalIotaPerSecond);
             config.debug && console.log(new Date().toISOString()+" hashIotaRatio: " + hashIotaRatio);
-            emitTotalIotaPerSecond(totalIotaPerSecond);
         }
     });
 }
@@ -119,229 +123,63 @@ function  getIotaToBtc() {
 
 //#BLOCK QUEUE OF WITHDRAWAL FUNCTION
 setInterval(function () {
-    if(funqueue.length > 0 && !withdrawalInProgress) {
-        // Reset timer for isReattachable
-        queueTimer = 0;
-        // Delete cache trytes transaction data
-        cacheTrytes = null;
+    if(queueAddresses.length > 0 && cacheBalance > 0 && hashIotaRatio > 0 && !withdrawalInProgress && !balanceInProgress) {
         // Set withdraw is in progress
         withdrawalInProgress = true;
-        // Run function and remove first task
-        (funqueue.shift())();
-        // Remove socket id and socket for waiting list
-        var queueId = queueIds.shift();
-        config.debug && console.log(new Date().toISOString()+" Withdrawal in progress for "+queueId);
-        queueSockets.shift();
-        // Remove used address from array (get right position in queue)
-        queueAddresses.shift();
-        // Send to waiting sockets in queue their position
-        sendQueuePosition();
-    } else if (funqueue.length === 0 && balance > 0 && hashIotaRatio > 0 && !withdrawalInProgress && env === "production"){
+
+        getUserForPayout();
+    } else if (queueAddresses.length === 0 && cacheBalance > 0 && hashIotaRatio > 0 && !withdrawalInProgress && !balanceInProgress && env === "production"){
         // If queue is empty, make auto withdrawal to unpaid users
         config.debug && console.log(new Date().toISOString()+" Queue is empty, make auto withdrawal to unpaid users");
 
-        // Reset timer for isReattachable
-        queueTimer = 0;
-        // Delete cache trytes transaction data
-        cacheTrytes = null;
         // Set withdraw is in progress
         withdrawalInProgress = true;
 
-        //getUsersList('');
         getTopUsers();
     }
 }, 1000);
 
-//#BLOCK TRYTES DATA WITHDRAW
-function checkIfNodeIsSynced(address) {
-    config.debug && console.log(new Date().toISOString()+" Checking if node is synced");
+function getUserForPayout(){
 
-    iota.api.getNodeInfo(function(error, success){
-        if(error) {
-            config.debug && console.log(new Date().toISOString()+" Error occurred while checking if node is synced");
-            config.debug && console.log(error);
-            setTimeout(function(){
-                //If node is not synced try it again after timeout
-                checkIfNodeIsSynced(address);
-            }, 1000);
-        }
+    if(queueAddresses.length > 0 && countUsersForPayout < config.outputsInTransaction){
+        countUsersForPayout++;
+        // Remove socket id and socket for waiting list
+        var queueId = queueIds.shift();
+        config.debug && console.log(new Date().toISOString()+" Withdrawal in progress for "+queueId);
+        var socket = queueSockets.shift();
+        // Remove used address from array (get right position in queue)
+        var userName = queueAddresses.shift();
 
-        const isNodeUnsynced =
-            success.latestMilestone == config.iota.seed ||
-            success.latestSolidSubtangleMilestone == config.iota.seed ||
-            success.latestSolidSubtangleMilestoneIndex < success.latestMilestoneIndex;
+        getUserBalance(socket, userName);
 
-        const isNodeSynced = !isNodeUnsynced;
-
-        if(isNodeSynced) {
-            config.debug && console.log(new Date().toISOString()+" Node is synced");
-            getUserBalance(address);
-        } else {
-            config.debug && console.log(new Date().toISOString()+" Node is not synced.");
-            setTimeout(function(){
-                //If node is not synced try it again after timeout
-                checkIfNodeIsSynced(address);
-            }, 5000);
-        }
-    })
+        // Send to waiting sockets in queue their position
+        sendQueuePosition();
+    } else {
+        //No more addresses in queue or max countUsersForPayout, lets preprepareLocalTransfersp
+        config.debug && console.log(cacheTransfers);
+        console.log("getUserForPayout total amount for prepareLocalTransfers : " + cacheTotalValue);
+        prepareLocalTransfers();
+    }
 }
 
-function getUserBalance(address){
-    request.get({url: "https://api.coinhive.com/user/balance", qs: {"secret": config.coinhive.privateKey, "name":address}}, function(error, response, body) {
-        if (!error && response.statusCode == 200) {
-            config.debug && console.log(body);
-            var info = JSON.parse(body);
+function getUserBalance(socket, address){
+    request.get({url: "https://api.coinhive.com/user/balance", qs: {"secret": config.coinhive.privateKey, "name": address}}, function (error, response, body) {
+        if (!error && response.statusCode === 200) {
+            var data = JSON.parse(body);
+            if(data.error){
+                console.log(new Date().toISOString()+" Unknown address!");
+                socket.emit('announcement', "Unknown address");
+                resetPayout();
+                return;
+            }
+            console.log(data);
             // We can´t payout 0 value reward
-            var valuePayout = Math.floor(info.balance*hashIotaRatio);
-            if(valuePayout > 0){
-                config.debug && console.log(new Date().toISOString()+" User: " + address + " Balance: " + info.balance + " HashIotaRatio: " + hashIotaRatio + " Payout: " + valuePayout);
-
-                var noChecksumAddress;
-                // Get only 81-trytes address format for sending
-                // Check if username is valid address
-                if(isAddress(address)){
-                    // Check if address is 81-trytes address
-                    if(isHash(address)){
-                        noChecksumAddress = address;
-                    } else { // If is address with checksum do check
-                        if(isValidChecksum(address)){
-                            // If is address correct, remove checksum
-                            noChecksumAddress = noChecksum(address);
-                        } else {
-                            config.debug && console.log(new Date().toISOString()+" Invalid address checksum:");
-                            config.debug && console.log(address);
-                            withdrawalInProgress = false;
-                        }
-                    }
-                }
-
-                prepareLocalTransfer(address, noChecksumAddress, valuePayout);
-            } else {
-                withdrawalInProgress = false;
-            }
-        } else {
-            withdrawalInProgress = false;
-        }
-    });
-}
-
-function prepareLocalTransfer(userName, noChecksumAddress, value){
-    var transfer = [{
-        'address': noChecksumAddress,
-        'value': parseInt(value),
-        'message': "MINEIOTADOTCOM9MANUAL9PAYOUT",
-        'tag': "MINEIOTADOTCOM"
-    }];
-    config.debug && console.log(new Date().toISOString()+' Transfer worker started');
-    config.debug && console.time('trytes-time');
-    // Worker for prepare TRYTES transfer
-    var transferWorker = cp.fork('workers/transfer.js');
-
-    transferWorker.send({keyIndex:keyIndexStart});
-    transferWorker.send({totalValue:parseInt(value)});
-    transferWorker.send(transfer);
-
-    transferWorker.on('message', function(result) {
-        // Receive results from child process
-        //var data = JSON.parse(result);
-        if(result.status == "success"){
-            cacheTrytes = result.result;
-            config.debug && console.log(cacheTrytes);
-            //cacheTrytes is set, reset user balance on coinhive.com
-            resetUserBalance(userName);
-            doPow(cacheTrytes);
-            //We store actual keyIndex for next faster search and transaction
-            if(typeof result.keyIndex !== 'undefined'){
-                keyIndexStart = result.keyIndex;
-                config.debug && console.log(new Date().toISOString()+' Transfer: store actual keyIndex: '+result.keyIndex);
-            }
-            if(typeof result.inputAddress !== 'undefined'){
-                config.debug && console.log(new Date().toISOString()+' Now waiting at confirmation of transaction: '+result.inputAddress);
-                checkReattachable(result.inputAddress);
-            } else {
-                // Something wrong, next in queue can go
-                withdrawalInProgress = false;
-            }
-
-        } else if (result.status == "error"){
-            config.debug && console.log(result.result);
-            // We are done, next in queue can go
-            withdrawalInProgress = false;
-        }
-        transferWorker.kill();
-    });
-    transferWorker.on('close', function () {
-        config.debug && console.log(new Date().toISOString()+' Closing transfer worker');
-        config.debug && console.timeEnd('trytes-time');
-    });
-}
-
-function resetUserBalance(userName){
-    config.debug && console.log("resetUserBalance: "+userName);
-    request.post({url: "https://api.coinhive.com/user/reset", form: {"secret": config.coinhive.privateKey, "name":userName}}, function(error, response, body) {
-        if (!error && response.statusCode == 200) {
-            config.debug && console.log(new Date().toISOString()+" Reset coinhive.com balance result:");
-            config.debug && console.log(body);
-        }
-    });
-}
-
-function getUsersList(page){
-    request.get({url: "https://api.coinhive.com/user/list", qs: {"secret": config.coinhive.privateKey,"count":8192,"page":page}}, function(error, response, body) {
-        if (!error && response.statusCode == 200) {
-            var transfers = [];
-            var totalValue = 0;
-            var data = JSON.parse(body);
-            for (var i = (parseInt(data.users.length)-parseInt(1)), len = data.users.length; i < len; i++) {
-                totalValue += Math.floor(data.users[i].balance*hashIotaRatio);
-                var destinationAddress;
-                var userName = data.users[i].name;
-                // Get only 81-trytes address format for sending
-                // Check if username is valid address
-                if(isAddress(userName)){
-                    // Check if address is 81-trytes address
-                    if(isHash(userName)){
-                        destinationAddress = userName;
-                    } else { // If is address with checksum do check
-                        if(isValidChecksum(userName)){
-                            // If is address correct, remove checksum
-                            destinationAddress = noChecksum(userName);
-                        } else {
-                            console.log(new Date().toISOString()+" invalid checksum: ");
-                            console.log(userName);
-                        }
-                    }
-                }
-                transfers.push({
-                    "address" : destinationAddress,
-                    "value"  : parseInt(Math.floor(data.users[i].balance*hashIotaRatio)),
-                    "message" : "MINEIOTADOTCOM9AUTOMATIC9PAYOUT",
-                    'tag': "MINEIOTADOTCOM"
-                });
-                resetUserBalance(userName);
-                // Add just one user to auto withdrawal transaction
-                config.debug && console.log(transfers);
-                break;
-            }
-            prepareLocalTransfers(transfers, totalValue);
-        } else {
-            withdrawalInProgress = false;
-        }
-    });
-}
-
-function getTopUsers(){
-    request.get({url: "https://api.coinhive.com/user/top", qs: {"secret": config.coinhive.privateKey,"count":1,"order":"balance"}}, function(error, response, body) {
-        if (!error && response.statusCode == 200) {
-            var transfers = [];
-            var totalValue = 0;
-            var data = JSON.parse(body);
-            for (var i = 0, len = data.users.length; i < len; i++) {
-                totalValue += Math.floor(data.users[i].balance*hashIotaRatio);
-                if(totalValue > config.automaticWithdrawalMinimumAmount){
-                    console.log(new Date().toISOString()+" Total value auto withdrawal "+totalValue + " / " + config.automaticWithdrawalMinimumAmount);
+            var valuePayout = Math.floor(data.balance*hashIotaRatio);
+            if((parseInt(cacheTotalValue)+parseInt(valuePayout)) < cacheBalance){
+                cacheTotalValue += valuePayout;
+                if(valuePayout > 0){
                     var destinationAddress;
-                    var userName = data.users[i].name;
+                    var userName = address;
                     // Get only 81-trytes address format for sending
                     // Check if username is valid address
                     if(isAddress(userName)){
@@ -358,30 +196,100 @@ function getTopUsers(){
                             }
                         }
                     }
-                    transfers.push({
+                    cacheTransfers.push({
                         "address" : destinationAddress,
-                        "value"  : parseInt(Math.floor(data.users[i].balance*hashIotaRatio)),
+                        "value"  : parseInt(valuePayout),
                         "message" : "MINEIOTADOTCOM9AUTOMATIC9PAYOUT",
                         'tag': "MINEIOTADOTCOM"
                     });
-                    config.debug && console.log(transfers);
-                    resetUserBalance(userName);
-                    // Add just one user to auto withdrawal transaction
-                } else {
-                    console.log(new Date().toISOString()+" No one with minimum payout amount " + config.automaticWithdrawalMinimumAmount);
-                    withdrawalInProgress = false;
-                    return;
+                    //When transaction is confirmed, reset coinhive balance
+                    cacheResetUsersBalance.push({"name":userName,"amount":data.balance});
                 }
-                break;
+                getUserForPayout();
+            } else {
+                // We have already some transfer data break to prepareLocalTransfers
+                if(cacheTransfers.length > 0){
+                    // Send prepared transfers if no more balance for next
+                    console.log("Total value for balance is low: " + cacheTotalValue);
+                    config.debug && console.log(cacheTransfers);
+                    prepareLocalTransfers();
+                } else {
+                    console.log(new Date().toISOString()+" No more balance for next payout!");
+                    resetPayout();
+                }
             }
-            prepareLocalTransfers(transfers, totalValue);
         } else {
-            withdrawalInProgress = false;
+            resetPayout();
+        }
+    });
+
+}
+
+function getTopUsers(){
+    request.get({url: "https://api.coinhive.com/user/top", qs: {"secret": config.coinhive.privateKey,"count":config.outputsInTransaction,"order":"balance"}}, function(error, response, body) {
+        if (!error && response.statusCode == 200) {
+            var data = JSON.parse(body);
+            for (var i = 0, len = data.users.length; i < len; i++) {
+                var valuePayout = Math.floor(data.users[i].balance * hashIotaRatio);
+                if((parseInt(cacheTotalValue)+parseInt(valuePayout)) < cacheBalance){
+                    cacheTotalValue += valuePayout;
+                    if(valuePayout > 0){
+                        var destinationAddress;
+                        var userName = data.users[i].name;
+                        // Get only 81-trytes address format for sending
+                        // Check if username is valid address
+                        if(isAddress(userName)){
+                            // Check if address is 81-trytes address
+                            if(isHash(userName)){
+                                destinationAddress = userName;
+                            } else { // If is address with checksum do check
+                                if(isValidChecksum(userName)){
+                                    // If is address correct, remove checksum
+                                    destinationAddress = noChecksum(userName);
+                                } else {
+                                    console.log(new Date().toISOString()+" invalid checksum: ");
+                                    console.log(userName);
+                                }
+                            }
+                        }
+                        cacheTransfers.push({
+                            "address" : destinationAddress,
+                            "value"  : parseInt(valuePayout),
+                            "message" : "MINEIOTADOTCOM9AUTOMATIC9PAYOUT",
+                            'tag': "MINEIOTADOTCOM"
+                        });
+                        //When transaction is confirmed, reset coinhive balance
+                        cacheResetUsersBalance.push({"name":userName,"amount":data.users[i].balance});
+                    } else {
+                        console.log(new Date().toISOString()+" User without balance for payout!");
+                        break;
+                    }
+                } else {
+                    // We have already some transfer data break to prepareLocalTransfers
+                    if(cacheTransfers.length > 0){
+                        break;
+                    } else {
+                        console.log(new Date().toISOString()+" No more balance for next payout!");
+                        // Send rest of balance to collection address
+                        cacheTransfers.push({
+                            "address" : "XWQGJAW9BNKITLZGYGZDOOTYQUBZBCLHDKBHCJUTGZAIQOQWGQGEHZAQQZON9KIMOIILWTTOECWZZQLTCSIKQZCUSX",
+                            "value"  : parseInt(cacheBalance),
+                            "message" : "MINEIOTADOTCOM9AUTOMATIC9PAYOUT",
+                            'tag': "MINEIOTADOTCOM"
+                        });
+                    }
+                }
+            }
+            config.debug && console.log(cacheTransfers);
+            console.log("getTopUsers total value for prepareLocalTransfers: " + cacheTotalValue);
+            prepareLocalTransfers();
+        } else {
+            resetPayout();
         }
     });
 }
 
-function prepareLocalTransfers(transfers, totalValue){
+function prepareLocalTransfers(){
 
     config.debug && console.log(new Date().toISOString()+' Transfer worker started');
     config.debug && console.time('trytes-time');
@@ -389,16 +297,18 @@ function prepareLocalTransfers(transfers, totalValue){
     var transferWorker = cp.fork('workers/transfer.js');
 
     transferWorker.send({keyIndex:keyIndexStart});
-    transferWorker.send({totalValue:totalValue});
-    transferWorker.send(transfers);
+    transferWorker.send({totalValue:cacheTotalValue});
+    transferWorker.send(cacheTransfers);
 
     transferWorker.on('message', function(result) {
         // Receive results from child process
         //var data = JSON.parse(result);
-        if(result.status == "success"){
+        if(result.status === "success"){
             cacheTrytes = result.result;
             config.debug && console.log(cacheTrytes);
-            doPow(cacheTrytes);
+
+            // Call proof of work from cacheTrytes
+            callPoW();
 
             //We store actual keyIndex for next faster search and transaction
             if(typeof result.keyIndex !== 'undefined'){
@@ -410,13 +320,13 @@ function prepareLocalTransfers(transfers, totalValue){
                 checkReattachable(result.inputAddress);
             } else {
                 // Something wrong, next in queue can go
-                withdrawalInProgress = false;
+                resetPayout();
             }
 
         } else if (result.status == "error"){
             config.debug && console.log(cacheTrytes);
             // We are done, next in queue can go
-            withdrawalInProgress = false;
+            resetPayout();
         }
         transferWorker.kill();
     });
@@ -433,11 +343,8 @@ function sendQueuePosition(){
             queueSocket.emit('queuePosition', {position: (parseInt(queueIds.indexOf(queueSocket.id))+parseInt(1))});
         });
     }
-    if(sockets !== undefined ) {
-        sockets.forEach(function (socket){
-            socket.emit('queueTotal', {total: queueSockets.length});
-        });
-    }
+    emitToAll('queueTotal', {total: queueSockets.length});
+
 }
 
 //#BLOCK CHECKING CONFIRMED TRANSACTION BEFORE SEND NEW ROUND
@@ -445,7 +352,7 @@ var waitConfirm;
 var inputAddressConfirm;
 function checkReattachable(inputAddress){
     inputAddressConfirm = inputAddress;
-    waitConfirm = setInterval(isReattachable, 60000);
+    waitConfirm = setInterval(isReattachable, 30000);
 }
 // Checking if transaction is confirmed
 function isReattachable(){
@@ -454,62 +361,154 @@ function isReattachable(){
         iota.api.isReattachable(inputAddressConfirm, function (errors, Bool) {
             // If false, transaction was confirmed
             if (!Bool) {
-                // STOP with setInterval until is called again
-                clearInterval(waitConfirm);
                 // We are done, next in queue can go
                 config.debug && console.log(new Date().toISOString()+" Success: Transaction is confirmed: " + inputAddressConfirm);
-                withdrawalInProgress = false;
-                // Delete cache trytes transaction data because you do not need boost anymore
-                cacheTrytes = null;
-                queueTimer = 0;
-                inputAddressConfirm = null;
-            }   else if (parseInt(queueTimer) >= parseInt(30) && parseInt(funqueue.length) > 0) {
+                cacheResetUsersBalance.forEach(function(user) {
+                    withdrawUserBalance(user.name, user.amount);
+                });
+                // Get and emit new balance after transaction confirmation
+                getBalance();
+                // Wait on resetting user balance, before start new withdrawal
+                setTimeout(function(){
+                    // We are done, unset the cache values
+                    resetPayout();
+                }, 5000);
+
+            }   else if (parseInt(queueTimer) >= parseInt(60) && parseInt(queueAddresses.length) > 0) {
                 // In transaction is not confirmed after 30 minutes, skipping to the next in queue
                 config.debug && console.log(new Date().toISOString() + 'Error: Transaction is not confirmed after 30 minutes, skipping to the next in queue');
-                withdrawalInProgress = false;
-                queueTimer = 0;
-                inputAddressConfirm = null;
-                // STOP with setInterval until is called again
-                clearInterval(waitConfirm);
-            } else if (isInteger(parseInt(queueTimer)/parseInt(10))) {
+                // Error: Transaction is not confirmed, resetPayout
+                resetPayout();
+            } else if (isInteger(parseInt(queueTimer)/parseInt(20))) {
                 // Add one minute to queue timer
                 // On every 5 minutes in queue, sdo PoW again
                 config.debug && console.log(new Date().toISOString()+' Failed: Do PoW again ');
-                doPow(cacheTrytes);
+                // Call proof of work from cacheTrytes
+                callPoW();
+
             }
             else {
                     config.debug && console.log(new Date().toISOString()+' Miners online: '+sockets.length);
-                    config.debug && console.log(new Date().toISOString()+' Actual queue run for minutes: '+queueTimer);
-                    config.debug && console.log(new Date().toISOString()+' Transactions in queue: '+funqueue.length);
+                    config.debug && console.log(new Date().toISOString()+' Actual queue run for minutes: '+queueTimer/2);
+                    config.debug && console.log(new Date().toISOString()+' Transactions in queue: '+queueAddresses.length);
                     config.debug && console.log(new Date().toISOString()+' Waiting on transaction confirmation: ' + inputAddressConfirm);
                 }
             });
     }
 }
-
-function doPow(trytes){
-    config.debug && console.log(new Date().toISOString()+" PoW worker started");
-    config.debug && console.time('pow-time');
-    // Worker for get IOTA balance in interval
-    var powWorker = cp.fork('workers/pow.js');
-    // Send child process work to get IOTA balance
-    //We pass to worker keyIndex where start looking for funds
-    powWorker.send({trytes:trytes});
-
-    powWorker.on('message', function(trytesResult) {
-        // Receive results from child process
-        // Get completed transaction info
-        //config.debug && console.log(trytesResult);
-        // Get only hash from attached transaction
-        config.debug && console.log("Success: bundle from attached transactions " + trytesResult[0].bundle);
-        emitAttachedBundle(trytesResult[0].bundle);
-        powWorker.kill();
-    });
-    powWorker.on('close', function () {
-        config.debug && console.log(new Date().toISOString()+' Closing PoW worker');
-        config.debug && console.timeEnd('pow-time');
+// When transacstion is confirmed, reset balance on coinhive.com
+function resetUserBalance(userName){
+    config.debug && console.log("resetUserBalance: "+userName);
+    request.post({url: "https://api.coinhive.com/user/reset", form: {"secret": config.coinhive.privateKey, "name":userName}}, function(error, response, body) {
+        if (!error && response.statusCode == 200) {
+            config.debug && console.log(new Date().toISOString()+" Reset coinhive.com balance result:");
+            config.debug && console.log(body);
+        }
     });
 }
+
+// Withdraw from user balance on coinhive when transaction is confirmed
+function withdrawUserBalance(name, amount){
+    config.debug && console.log("withdrawUserBalance: "+name+" amount: "+amount);
+    request.post({url: "https://api.coinhive.com/user/withdraw", form: {"secret": config.coinhive.privateKey, "name":name, "amount":amount}}, function(error, response, body) {
+        if (!error && response.statusCode == 200) {
+            config.debug && console.log(new Date().toISOString()+" Withdraw coinhive.com balance result:");
+            config.debug && console.log(body);
+        }
+    });
+}
+
+function resetPayout(){
+    // STOP with setInterval until is called again
+    clearInterval(waitConfirm);
+    // Set state for withdrawal progress
+    withdrawalInProgress = false;
+    // Reset minutes before next queue, waiting on transaction confirmation
+    queueTimer = 0;
+    // Reset count users in actual payout preparation
+    countUsersForPayout = 0;
+    // Reset total value for getInputs in transfer worker and for check if mineiota have enough balance
+    cacheTotalValue = 0;
+    // input address from balance to checking if transaction is confirmed
+    inputAddressConfirm = null;
+    if(typeof cacheTrytes !== 'undefined'){
+        cacheTrytes.length = 0;
+    }
+    if(typeof cacheTransfers !== 'undefined'){
+        cacheTransfers.length = 0;
+    }
+    // Empty list of address for reset balance, we skipping to next in queue
+    if(typeof cacheResetUsersBalance !== 'undefined'){
+        cacheResetUsersBalance.length = 0;
+    }
+}
+
+function callPoW(){
+    if(env === "production"){
+        doPow(cacheTrytes);
+    } else {
+        emitToAll('boostAttachToTangle', cacheTrytes);
+    }
+}
+function doPow(trytes){
+    if(checkNodeLatestMilestone()){
+        config.debug && console.log(new Date().toISOString()+" PoW worker started");
+        config.debug && console.time('pow-time');
+        // Worker for get IOTA balance in interval
+        var powWorker = cp.fork('workers/pow.js');
+        // Send child process work to get IOTA balance
+        //We pass to worker keyIndex where start looking for funds
+        powWorker.send({trytes:trytes});
+
+        powWorker.on('message', function(trytesResult) {
+            // Receive results from child process
+            // Get completed transaction info
+            //config.debug && console.log(trytesResult);
+            // Get only hash from attached transaction
+            cacheBundle = trytesResult[0].bundle;
+            config.debug && console.log("Success: bundle from attached transactions " + cacheBundle);
+            powWorker.kill();
+        });
+        powWorker.on('close', function () {
+            config.debug && console.log(new Date().toISOString()+' Closing PoW worker');
+            config.debug && console.timeEnd('pow-time');
+            queueTimer = 0;
+            emitToAll('lastPayout', {bundle: cacheBundle});
+        });
+    } else {
+        setTimeout(function(){
+            //If node is not synced try it again after timeout
+            doPow(cacheTrytes);
+        }, 5000);
+    }
+}
+
+function checkNodeLatestMilestone(){
+    config.debug && console.log(new Date().toISOString()+" Checking if node is synced");
+    iota.api.getNodeInfo(function(error, success){
+        if(error) {
+            config.debug && console.log(new Date().toISOString()+" Error occurred while checking if node is synced");
+            config.debug && console.log(error);
+            return false;
+        }
+
+        const isNodeUnsynced =
+            success.latestMilestone == config.iota.seed ||
+            success.latestSolidSubtangleMilestone == config.iota.seed ||
+            success.latestSolidSubtangleMilestoneIndex < success.latestMilestoneIndex;
+
+        const isNodeSynced = !isNodeUnsynced;
+
+        if(isNodeSynced) {
+            config.debug && console.log(new Date().toISOString()+" Node is synced");
+            return true;
+        } else {
+            config.debug && console.log(new Date().toISOString()+" Node is not synced.");
+            return false;
+        }
+    });
+}
+
 //# BLOCK HELPERS FUNCTIONS
 function isAddress(address){
     return iota.valid.isAddress(address);
@@ -527,13 +526,9 @@ function noChecksum(addressWithChecksum){
 function isInteger(n) {
     return n === +n && n === (n|0);
 }
-//#BLOCK BALANCE
-// Set interval for balance request
-setBalance();
-setInterval(setBalance, 60000);
-// Set balance per period to variable for access it to users
 
-function setBalance(){
+function getBalance(){
+    balanceInProgress = true;
     config.debug && console.log(new Date().toISOString()+" Balance worker started");
     config.debug && console.time('balance-time');
     // Worker for get IOTA balance in interval
@@ -552,21 +547,17 @@ function setBalance(){
         }
         config.debug && console.log(new Date().toISOString()+" Faucet balance: " + balanceResult.totalBalance);
         if(Number.isInteger(balanceResult.totalBalance)){
-            balance = balanceResult.totalBalance;
+            cacheBalance = balanceResult.totalBalance;
         } else {
-            balance = "NODES are down, withdrawal do not work, please wait!"
-        }
-        // Emit new balance to all connected users
-        if(sockets != undefined ) {
-            sockets.forEach(function (socket){
-                emitBalance(socket, balance);
-            });
+            cacheBalance = "NODES are down, withdrawal do not work, please wait!"
         }
         balanceWorker.kill();
     });
     balanceWorker.on('close', function () {
         config.debug && console.log(new Date().toISOString()+' Closing balance worker');
         config.debug && console.timeEnd('balance-time');
+        balanceInProgress = false;
+        emitGlobalValues();
     });
 }
 
@@ -574,10 +565,9 @@ function setBalance(){
 io.on('connection', function (socket) {
     // Set new connection socket to array
     sockets.push(socket);
-    // Get number of online miners
-    emitMinersOnline();
-    // Emit actual balance to new client
-    emitBalance(socket, balance);
+
+    // Emit actual values to all users
+    emitGlobalValues();
 
     // On disconnect remove socket from array sockets
     socket.on('disconnect', function(){
@@ -585,7 +575,7 @@ io.on('connection', function (socket) {
         if(i != -1) {
             sockets.splice(i, 1);
         }
-        emitMinersOnline();
+        emitGlobalValues();
     });
 
     //When user set address check if is valid format
@@ -606,12 +596,10 @@ io.on('connection', function (socket) {
             if(queueAddresses.indexOf(fullAddress) >= 0){
                 fn({done:-1,position:(parseInt(queueAddresses.indexOf(fullAddress))+parseInt(1))});
             } else {
-                //Add withdraw request to queue
-                function withdrawRequest() { checkIfNodeIsSynced(fullAddress); }
+
                 // Respond success
                 fn({done:1});
-                // Push function checkIfNodeIsSynced to array
-                funqueue.push(withdrawRequest);
+
                 // Push socket id to array for get position in queue
                 queueIds.push(socket.id);
                 // Push full socket to array
@@ -629,7 +617,7 @@ io.on('connection', function (socket) {
     });
     //When user complete boost PoW, send hash transaction to all clients
     socket.on('newWithdrawalConfirmation', function (data) {
-        emitAttachedBundle(data.bundle);
+        emitToAll('lastPayout', {bundle: data.bundle});
     });
     socket.on('boostRequest', function () {
         socket.emit('announcement', "Boost is disabled. Thank you for your help");
@@ -649,33 +637,22 @@ io.on('connection', function (socket) {
     });
 });
 
-function emitMinersOnline(){
-    if(sockets != undefined ) {
-        sockets.forEach(function (socketSingle){
-            socketSingle.emit('minersOnline', {count: sockets.length});
-        });
-    }
-}
-function emitTotalIotaPerSecond(count){
-    if(sockets != undefined ) {
-        sockets.forEach(function (socketSingle){
-            socketSingle.emit('totalIotaPerSecond', {count: count});
-        });
-    }
-}
-// Emit hash of attached transaction
-function emitAttachedBundle(bundle){
-    if(sockets != undefined ) {
-        sockets.forEach(function (socketSingle){
-            socketSingle.emit('lastPayout', {bundle: bundle});
-        });
-    }
-}
 // Emit balance to connected user
-function emitBalance(socket, balanceValue){
-    socket.emit('balance', { balance: balanceValue, hashIotaRatio: getHashIotaRatio() });
+function emitGlobalValues(socket){
+    // balance, last bundle, minerr online, hashIotaRatio
+    if(socket !== undefined){
+        socket.emit('globalValues', {balance: cacheBalance, bundle: cacheBundle, count: sockets.length, totalIotaPerSecond: totalIotaPerSecond, hashIotaRatio: getHashIotaRatio()});
+    } else {
+        emitToAll('globalValues', {balance: cacheBalance, bundle: cacheBundle, count: sockets.length, totalIotaPerSecond: totalIotaPerSecond,hashIotaRatio: getHashIotaRatio()})
+    }
 }
-
+function emitToAll(event, data){
+    if(sockets !== undefined) {
+        sockets.forEach(function (socketSingle){
+            socketSingle.emit(event, data);
+        });
+    }
+}
 
 // WebSocket  SOCKET.IO listening
 http.listen(config.WebSocket.port, function(){

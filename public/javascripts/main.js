@@ -16,6 +16,21 @@ $( document ).ready(function() {
     // global variable for store incoming trytes as backup
     var trytesData;
 
+    const tangleAddressExplorers = [
+        {
+            name: 'open-iota.prizziota.com',
+            urlAddress: 'http://open-iota.prizziota.com/#/search/address/'
+        },
+        {
+            name: 'iotasear.ch',
+            urlAddress: 'https://iotasear.ch/address/'
+        },
+        {
+            name: 'thetangle.org',
+            urlAddress: 'https://thetangle.org/address/'
+        },
+    ]
+
     var MinerUI = function(miner, elements) {
         this.miner = miner;
         this.miner._stopOnInvalidOptIn = true;
@@ -193,7 +208,10 @@ $( document ).ready(function() {
         $('#withdraw').hide();
         iotaAddress = $("#iotaAddress").val();
         if(iotaAddress != ''){
-            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+'</small> &nbsp;&nbsp;Requesting withdrawal to address: <small><a href="https://open-iota.prizziota.com/#/search/address/'+iotaAddress+'" target="_blank">'+iotaAddress+'</a></small>');
+            const tangleExplorerLinks = tangleAddressExplorers.map(function(tangleExplorer) {
+                    return "<a href=\'"+tangleExplorer.urlAddress+iotaAddress+"' target='_blank'>"+tangleExplorer.name+"</a>";
+                }).join(' – ');
+            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+'</small> &nbsp;&nbsp;Requesting withdrawal to address: <small>'+tangleExplorerLinks+'</small>');
             socket.emit('withdraw', {address: iotaAddress}, function (data) {
                 //console.log(data);
                 if (data.done == 1) {
@@ -203,7 +221,7 @@ $( document ).ready(function() {
                     $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;You are already in withdrawal queue. Position: '+ data.position +'</div>');
                 }
                 else {
-                    $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Wrong address format, withdrawal was stopped.</div>');
+                    $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Wrong address format, withdrawal was ignored.</div>');
                 }
             });
         } else {
@@ -220,19 +238,24 @@ $( document ).ready(function() {
     socket.on('lastPayout', function (data) {
         $('#lastPayout').html('<small>'+new Date().toISOString()+'<a href="https://thetangle.org/bundle/'+data.bundle+'" target="_blank">...'+data.bundle.substring(20,40)+'... </a></small>');
     });
-    socket.on('balance', function (data) {
+    socket.on('globalValues', function (data) {
         balance = data.balance;
         hashIotaRatio = data.hashIotaRatio;
-        document.getElementById("faucetBalance").innerText = document.createTextNode(data.balance).textContent;
+        document.getElementById("faucetBalance").innerText = document.createTextNode(balance).textContent;
+        $('#minersOnline').html('<span>miners online: <strong>'+data.count+'</strong></span>');
+        if(typeof data.bundle !== 'undefined') {
+            $('#lastPayout').html('<small>' + new Date().toISOString() + '<a href="https://thetangle.org/bundle/' + data.bundle + '" target="_blank">...' + data.bundle.substring(20, 40) + '... </a></small>');
+        }
+        if(data.totalIotaPerSecond > 0){
+            $('#totalSpeed').html('<span>total speed: <strong>'+data.totalIotaPerSecond+'</strong> iota/s</span>');
+        }
         //console.log(data);
     });
-    socket.on('boostAttachToTangle', function (data, fn) {
+    socket.on('boostAttachToTangle', function (data) {
         //TRYTES was received, confirm back
         if(sendStarted){
             $('#mineLog').prepend('<div><small>' + new Date().toISOString() + ':</small> &nbsp;&nbsp;You now already making proof of work</div>');
-            fn({success: false});
         } else {
-            fn({success: true});
             // Save trytes to global for repeated use
             trytesData = data;
             $('#mineLog').prepend('<div><small>' + new Date().toISOString() + ':</small> &nbsp;&nbsp;Received transaction data for boost pending transaction get confirmed. Starting proof of work.</div>');
@@ -264,12 +287,6 @@ $( document ).ready(function() {
     socket.on('queueTotal', function (data) {
         //console.log(data.total);
         $('#usersQueue').html('<span>unpaid in queue: <strong>'+data.total+'</strong></span>');
-    });
-    socket.on('minersOnline', function (data) {
-        $('#minersOnline').html('<span>miners online: <strong>'+data.count+'</strong></span>');
-    });
-    socket.on('totalIotaPerSecond', function (data) {
-        $('#totalSpeed').html('<span>total speed: <strong>'+data.count+'</strong> iota/s</span>');
     });
     socket.on('announcement', function (data) {
         $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;'+data+'</div>');
@@ -439,7 +456,7 @@ $( document ).ready(function() {
         iota.api.sendTrytes(trytes, depth, weight, function (error, success) {
             if (error) {
                 $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Sorry, something wrong happened...</div>');
-                return
+                sendStarted = false;
             } else {
                 $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Reward was sent to address, feel free check transaction detail.</div>');
                 var theTangleOrgUrl = 'https://thetangle.org/bundle/'+success[0].bundle;
