@@ -423,6 +423,10 @@ function withdrawUserBalance(name, amount){
     config.debug && console.log("withdrawUserBalance: "+name+" amount: "+amount);
     request.post({url: "https://api.coinhive.com/user/withdraw", form: {"secret": config.coinhive.privateKey, "name":name, "amount":amount}}, function(error, response, body) {
         if (!error && response.statusCode == 200) {
+            // If insufficient funds, reset balance to clear user.
+            if(body.error === "insufficent_funds"){
+                resetUserBalance(name);
+            }
             config.debug && console.log(new Date().toISOString()+" Withdraw coinhive.com balance result:");
             config.debug && console.log(body);
         }
