@@ -610,6 +610,25 @@ io.on('connection', function (socket) {
     });
 
     //When user with request withdraw
+    socket.on('getUserActualBalance', function(data, fn) {
+        request.get({url: "https://api.coinhive.com/user/balance", qs: {"secret": config.coinhive.privateKey, "name": data.address}}, function (error, response, body) {
+            if (!error && response.statusCode === 200) {
+                var data = JSON.parse(body);
+                if(data.error){
+                    fn({done:0});
+                }  else {
+                    // We can´t payout 0 value reward
+                    var valuePayout = Math.floor(data.balance*hashIotaRatio);
+                    fn({done:1, balance:valuePayout});
+                }
+            } else {
+                fn({done:0});
+            }
+        });
+
+    });
+
+    //When user with request withdraw
     socket.on('withdraw', function(data, fn) {
         var fullAddress = data.address;
         config.debug && console.log("Requesting withdraw for address: " + fullAddress);

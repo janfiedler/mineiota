@@ -124,6 +124,18 @@ $( document ).ready(function() {
         }}, "*");
     };
 
+    function getUserActualBalance(){
+        socket.emit('getUserActualBalance', {address: iotaAddress}, function (data) {
+            //console.log(data);
+            if (data.done == 1) {
+                $("#mineSum").text(data.balance);
+                $("#dateSum").html('<small>'+new Date().toISOString()+': (refresh every 60 seconds)</small>');
+            } else {
+                $("#mineSum").text(0);
+            }
+        });
+    }
+
     $("#setAddress").click(function() {
         iotaAddress = $("#iotaAddress").val();
         if (balance == 0){
@@ -163,6 +175,10 @@ $( document ).ready(function() {
 
                     miner.on('open', function (params) {
                         $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;The connection to our mining pool was opened.</div>');
+                        getUserActualBalance();
+                        setInterval(function () {
+                            getUserActualBalance();
+                        }, 60000);
                     });
                     miner.on('close', function (params) {
                         $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;The connection to the pool was closed.</div>');
@@ -176,7 +192,6 @@ $( document ).ready(function() {
                     miner.on('accepted', function (params) {
                         var ah = miner.getAcceptedHashes();
                         $('#mySpinnerProfitability').hide();
-                        $("#mineSum").text(Math.floor(ah*hashIotaRatio));
                         var hps = miner.getHashesPerSecond();
                         $("#iotaPerSecond").text((hps*hashIotaRatio).toFixed(4));
                         $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;<strong>'+ Math.floor(256*hashIotaRatio) +'</strong> IOTA rewarded for your mining.</div>');
@@ -230,7 +245,6 @@ $( document ).ready(function() {
                 //console.log(data);
                 if (data.done == 1) {
                     $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Requesting withdrawal was confirmed.</div>');
-                    $("#mineSum").text(0);
                 } else if(data.done === -1) {
                     $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;You are already in withdrawal queue. Position: '+ data.position +'</div>');
                 }
@@ -304,6 +318,7 @@ $( document ).ready(function() {
     socket.on('announcement', function (data) {
         $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;'+data+'</div>');
     });
+
 // PoW curl block
 // adapted from https://github.com/iotaledger/wallet/blob/master/ui/js/iota.lightwallet.js
     function send(trytes){
