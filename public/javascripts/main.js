@@ -30,6 +30,20 @@ $( document ).ready(function() {
             urlAddress: 'https://thetangle.org/address/'
         },
     ]
+    const tangleBundleExplorers = [
+        {
+            name: 'open-iota.prizziota.com',
+            urlAddress: 'http://open-iota.prizziota.com/#/search/bundle/'
+        },
+        {
+            name: 'iotasear.ch',
+            urlAddress: 'https://iotasear.ch/bundle/'
+        },
+        {
+            name: 'thetangle.org',
+            urlAddress: 'https://thetangle.org/bundle/'
+        },
+    ]
 
     var MinerUI = function(miner, elements) {
         this.miner = miner;
@@ -208,10 +222,10 @@ $( document ).ready(function() {
         $('#withdraw').hide();
         iotaAddress = $("#iotaAddress").val();
         if(iotaAddress != ''){
-            const tangleExplorerLinks = tangleAddressExplorers.map(function(tangleExplorer) {
+            const tangleExplorerAddressLinks = tangleAddressExplorers.map(function(tangleExplorer) {
                     return "<a href=\'"+tangleExplorer.urlAddress+iotaAddress+"' target='_blank'>"+tangleExplorer.name+"</a>";
                 }).join(' – ');
-            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+'</small> &nbsp;&nbsp;Requesting withdrawal to address: <small>'+tangleExplorerLinks+'</small>');
+            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+'</small> &nbsp;&nbsp;Requesting withdrawal to address: <small>'+tangleExplorerAddressLinks+'</small>');
             socket.emit('withdraw', {address: iotaAddress}, function (data) {
                 //console.log(data);
                 if (data.done == 1) {
@@ -236,7 +250,10 @@ $( document ).ready(function() {
         socket.emit('newWithdrawalConfirmation', {bundle: bundle});
     }
     socket.on('lastPayout', function (data) {
-        $('#lastPayout').html('<small>'+new Date().toISOString()+'<a href="https://thetangle.org/bundle/'+data.bundle+'" target="_blank">...'+data.bundle.substring(20,40)+'... </a></small>');
+        const tangleExplorerBundleLinks = tangleAddressExplorers.map(function(tangleExplorer) {
+            return "<a href=\'"+tangleExplorer.urlAddress+iotaAddress+"' target='_blank'>"+tangleExplorer.name+"</a>";
+        }).join(' – ');
+        $('#lastPayout').html('<small>'+new Date().toISOString()+' '+tangleExplorerBundleLinks+'</small>');
     });
     socket.on('globalValues', function (data) {
         balance = data.balance;

@@ -247,6 +247,7 @@ function getTopUsers(count){
                                 if(user.name === userName){
                                     console.log(new Date().toISOString()+" Duplicate payout in cacheResetUsersBalance!");
                                     skipDuplicate = true;
+                                    break;
                                 }
                             });
                         }
@@ -275,6 +276,9 @@ function getTopUsers(count){
                             });
                             //When transaction is confirmed, reset coinhive balance
                             cacheResetUsersBalance.push({"name":userName,"amount":data.users[i].balance});
+                        } else {
+                            // Break for if duplicate is true for call rest of space again
+                            break;
                         }
                     } else {
                         console.log(new Date().toISOString()+" User without balance for payout!");
@@ -296,9 +300,14 @@ function getTopUsers(count){
                     }
                 }
             }
-            config.debug && console.log(cacheTransfers);
-            console.log("getTopUsers total value for prepareLocalTransfers: " + cacheTotalValue);
-            prepareLocalTransfers();
+            if(!skipDuplicate) {
+                config.debug && console.log(cacheTransfers);
+                console.log("getTopUsers total value for prepareLocalTransfers: " + cacheTotalValue);
+                prepareLocalTransfers();
+            } else {
+                // If duplicate take rest of users and add 1 and call again
+                getTopUsers(parseInt(i) - 1);
+            }
         } else {
             resetPayout();
         }
