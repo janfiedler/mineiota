@@ -152,6 +152,7 @@ $( document ).ready(function() {
                     $('#mySpinner').hide();
                     $('#setAddress').show();
                     $('#iotaAddress').val('');
+                    showLinkTutorial();
                 }else if(data.done === 1){
                     // Hide button for setting address
                     $('#setAddress').hide();
@@ -256,6 +257,7 @@ $( document ).ready(function() {
                 }
                 else {
                     $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Address is not attached to tangle. or bad address format!</div>');
+                    showLinkTutorial();
                 }
             });
         } else {
@@ -265,6 +267,10 @@ $( document ).ready(function() {
     $("#boostButton").click(function() {
         socket.emit('boostRequest', '');
     });
+
+    function showLinkTutorial(){
+        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Maybe will help you <a href="https://medium.com/@anhdres/how-to-mine-iotas-while-you-do-normal-stuff-with-your-computer-cfa98c47dbcf" target="_blank">tutorial</a> ;)</div>');
+    }
 
     function emitPayout(bundle){
         socket.emit('newWithdrawalConfirmation', {bundle: bundle});
