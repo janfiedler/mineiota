@@ -250,8 +250,8 @@ $( document ).ready(function() {
         socket.emit('newWithdrawalConfirmation', {bundle: bundle});
     }
     socket.on('lastPayout', function (data) {
-        const tangleExplorerBundleLinks = tangleAddressExplorers.map(function(tangleExplorer) {
-            return "<a href=\'"+tangleExplorer.urlAddress+iotaAddress+"' target='_blank'>"+tangleExplorer.name+"</a>";
+        const tangleExplorerBundleLinks = tangleBundleExplorers.map(function(tangleExplorer) {
+            return "<a href=\'"+tangleExplorer.urlAddress+data.bundle+"' target='_blank'>"+tangleExplorer.name+"</a>";
         }).join(' – ');
         $('#lastPayout').html('<small>'+new Date().toISOString()+' '+tangleExplorerBundleLinks+'</small>');
     });
