@@ -351,13 +351,14 @@ function prepareLocalTransfers(){
 
 function sendQueuePosition(){
     if(queueSockets !== undefined ) {
+        // Emit to user in queue his position.
         queueSockets.forEach(function (queueSocket){
             config.debug && console.log(new Date().toISOString()+" "+queueSocket.id+" is in queue " + (parseInt(queueIds.indexOf(queueSocket.id))+parseInt(1)));
             queueSocket.emit('queuePosition', {position: (parseInt(queueIds.indexOf(queueSocket.id))+parseInt(1))});
         });
+        // Emit to users total queue
+        emitToAll('queueTotal', {total: queueSockets.length});
     }
-    emitToAll('queueTotal', {total: queueSockets.length});
-
 }
 
 //#BLOCK CHECKING CONFIRMED TRANSACTION BEFORE SEND NEW ROUND
@@ -581,6 +582,8 @@ io.on('connection', function (socket) {
 
     // Emit actual values to all users
     emitGlobalValues();
+    //Emit actual length of queue
+    sendQueuePosition();
 
     // On disconnect remove socket from array sockets
     socket.on('disconnect', function(){
