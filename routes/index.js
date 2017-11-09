@@ -494,9 +494,6 @@ function doPow(trytes){
         config.debug && console.log(new Date().toISOString()+' Closing PoW worker');
         config.debug && console.timeEnd('pow-time');
         // Only if this is first doPoW until 5 minutes reset timer, for get exactly 10 min for confirmation
-        if(queueTimer < 10){
-            queueTimer = 0;
-        }
         emitGlobalValues();
     });
 }
