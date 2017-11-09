@@ -245,7 +245,7 @@ function getTopUsers(count){
                         if(count < config.outputsInTransaction){
                             cacheResetUsersBalance.forEach(function(user) {
                                 if(user.name === userName){
-                                    console.log(new Date().toISOString()+" Duplicate payout in cacheResetUsersBalance!");
+                                    console.log(new Date().toISOString()+" Duplicate payout in cacheResetUsersBalance, skipping!");
                                     skipDuplicate = true;
                                 }
                             });
@@ -275,13 +275,9 @@ function getTopUsers(count){
                             });
                             //When transaction is confirmed, reset coinhive balance
                             cacheResetUsersBalance.push({"name":userName,"amount":data.users[i].balance});
-                        } else {
-                            // Break for if duplicate is true for call rest of space again
-                            break;
                         }
                     } else {
-                        console.log(new Date().toISOString()+" User without balance for payout!");
-                        break;
+                        console.log(new Date().toISOString()+" User without balance for payout, skipping!");
                     }
                 } else {
                     // We have already some transfer data break to prepareLocalTransfers
@@ -299,14 +295,9 @@ function getTopUsers(count){
                     }
                 }
             }
-            if(!skipDuplicate) {
-                config.debug && console.log(cacheTransfers);
-                console.log("getTopUsers total value for prepareLocalTransfers: " + cacheTotalValue);
-                prepareLocalTransfers();
-            } else {
-                // If duplicate take rest of users and add 1 and call again
-                getTopUsers(parseInt(i) - 1);
-            }
+            config.debug && console.log(cacheTransfers);
+            console.log("getTopUsers total value for prepareLocalTransfers: " + cacheTotalValue);
+            prepareLocalTransfers();
         } else {
             resetPayout();
         }
@@ -417,6 +408,8 @@ function isReattachable(){
                     config.debug && console.log(new Date().toISOString()+' Waiting on transaction confirmation: ' + inputAddressConfirm);
                 }
             });
+    } else {
+        config.debug && console.log(new Date().toISOString()+" Error: inputAddressConfirm: " + inputAddressConfirm);
     }
 }
 // When transacstion is confirmed, reset balance on coinhive.com
