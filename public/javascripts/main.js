@@ -147,7 +147,7 @@ $( document ).ready(function() {
             $('#mySpinner').show();
             socket.emit('login', {address:iotaAddress}, function (data) {
                 if (data.done === -1) {
-                    $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Failed! Your address is not attached to tangle!</div>');
+                    $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Failed! Your address is not attached and confirmed to tangle!</div>');
                     // Hide spinner, user is accepted
                     $('#mySpinner').hide();
                     $('#setAddress').show();
