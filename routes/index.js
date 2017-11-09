@@ -126,7 +126,7 @@ setInterval(function () {
         withdrawalInProgress = true;
 
         getUserForPayout();
-    } else if (queueAddresses.length === 0 && cacheBalance > 0 && hashIotaRatio > 0 && !withdrawalInProgress && !balanceInProgress && env === "production"){
+    } else if (queueAddresses.length === 0 && cacheBalance > 0 && hashIotaRatio > 0 && !withdrawalInProgress && !balanceInProgress && env === "production_temp"){
         // If queue is empty, make auto withdrawal to unpaid users
         config.debug && console.log(new Date().toISOString()+" Queue is empty, make auto withdrawal to unpaid users");
 
@@ -148,12 +148,16 @@ function getUserForPayout(){
         var userName = queueAddresses.shift();
 
         getUserBalance(socket, userName);
-    } else if(queueAddresses.length === 0 && countUsersForPayout < config.outputsInTransaction){
+    }
+    /* Temporarily suspended automatic payouts
+    else if(queueAddresses.length === 0 && countUsersForPayout < config.outputsInTransaction){
         var outputsTransactionLeft = parseInt(config.outputsInTransaction) - parseInt(countUsersForPayout);
         if(outputsTransactionLeft > 0){
             getTopUsers(outputsTransactionLeft);
         }
-    } else {
+    }
+    */
+    else {
         // Send to waiting sockets in queue their position
         sendQueuePosition();
         //No more addresses in queue or max countUsersForPayout, lets preprepareLocalTransfersp
@@ -241,6 +245,7 @@ function getTopUsers(count){
                         var destinationAddress;
                         var userName = data.users[i].name;
                         var skipDuplicate = false;
+
                         // If getTopUsers fill rest of space for manual payments, checking for duplicate
                         if(count < config.outputsInTransaction){
                             cacheResetUsersBalance.forEach(function(user) {
@@ -527,6 +532,31 @@ function checkNodeLatestMilestone(){
 }
 
 //# BLOCK HELPERS FUNCTIONS
+function isAddressAttachedToTangle(address,callback) {
+    iota.api.findTransactions({"addresses":Array(address)}, function (errors, success) {
+        if (success.length === 0) {
+            config.debug && console.log(new Date().toISOString()+' Error: '+address+' is not attached to tangle! ');
+            callback(false);
+        } else {
+            iota.api.getLatestInclusion(success, function (errors, success) {
+                if (success.length === 0) {
+                    config.debug && console.log(new Date().toISOString()+' Error: '+address+' is not attached to tangle! ');
+                    callback(false);
+                } else {
+                    //
+                    for (var i = 0, len = success.length; i < len; i++) {
+                        if(success[i] === true){
+                            callback(true);
+                            return;
+                        }
+                    }
+                    config.debug && console.log(new Date().toISOString()+' Error: '+address+' is not attached to tangle! ');
+                    callback(false);
+                }
+            })
+        }
+    });
+}
 function isAddress(address){
     return iota.valid.isAddress(address);
 }
@@ -600,13 +630,20 @@ io.on('connection', function (socket) {
     //When user set address check if is valid format
     socket.on('login', function (data, fn) {
         if(isAddress(data.address)){
-            fn({publicKey:config.coinhive.publicKey,username:data.address});
+            isAddressAttachedToTangle(data.address, function(result) {
+                if(result === true){
+                    fn({done:1,publicKey:config.coinhive.publicKey,username:data.address});
+                } else {
+                    console.log('Finished, is not attached to tangle');
+                    fn({done:-1});
+                }
+            });
         } else {
             fn(false);
         }
     });
 
-    //When user with request withdraw
+    //When user request actual balance
     socket.on('getUserActualBalance', function(data, fn) {
         request.get({url: "https://api.coinhive.com/user/balance", qs: {"secret": config.coinhive.privateKey, "name": data.address}}, function (error, response, body) {
             if (!error && response.statusCode === 200) {
@@ -634,21 +671,27 @@ io.on('connection', function (socket) {
             if(queueAddresses.indexOf(fullAddress) >= 0){
                 fn({done:-1,position:(parseInt(queueAddresses.indexOf(fullAddress))+parseInt(1))});
             } else {
-
-                // Respond success
-                fn({done:1});
-
-                // Push socket id to array for get position in queue
-                queueIds.push(socket.id);
-                // Push full socket to array
-                queueSockets.push(socket);
-                // Push address to array
-                queueAddresses.push(fullAddress);
-                // Send to client position in queue
-                config.debug && console.log(fullAddress+" is in queue " + (parseInt(queueIds.indexOf(socket.id))+parseInt(1)));
-                socket.emit('queuePosition', {position: (parseInt(queueIds.indexOf(socket.id))+parseInt(1))});
-                // Now update queue position for all users
-                sendQueuePosition();
+                // TODO remove after few version, when all will have new version
+                isAddressAttachedToTangle(fullAddress, function(result) {
+                    if(result === true){
+                        // Respond success
+                        fn({done:1});
+                        // Push socket id to array for get position in queue
+                        queueIds.push(socket.id);
+                        // Push full socket to array
+                        queueSockets.push(socket);
+                        // Push address to array
+                        queueAddresses.push(fullAddress);
+                        // Send to client position in queue
+                        config.debug && console.log(fullAddress+" is in queue " + (parseInt(queueIds.indexOf(socket.id))+parseInt(1)));
+                        socket.emit('queuePosition', {position: (parseInt(queueIds.indexOf(socket.id))+parseInt(1))});
+                        // Now update queue position for all users
+                        sendQueuePosition();
+                    } else {
+                        console.log('Finished, '+fullAddress+'address is not attached to tangle');
+                        fn({done:0});
+                    }
+                });
             }
         } else {
             // Respond error

@@ -146,7 +146,13 @@ $( document ).ready(function() {
             $('#setAddress').hide();
             $('#mySpinner').show();
             socket.emit('login', {address:iotaAddress}, function (data) {
-                if(data){
+                if (data.done === -1) {
+                    $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Failed! Your address is not attached to tangle!</div>');
+                    // Hide spinner, user is accepted
+                    $('#mySpinner').hide();
+                    $('#setAddress').show();
+                    $('#iotaAddress').val('');
+                }else if(data.done === 1){
                     // Hide button for setting address
                     $('#setAddress').hide();
                     // Hide spinner, user is accepted
@@ -249,7 +255,7 @@ $( document ).ready(function() {
                     $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;You are already in withdrawal queue. Position: '+ data.position +'</div>');
                 }
                 else {
-                    $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Wrong address format, withdrawal was ignored.</div>');
+                    $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Address is not attached to tangle. or bad address format!</div>');
                 }
             });
         } else {
