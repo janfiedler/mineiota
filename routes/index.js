@@ -495,7 +495,7 @@ function doPow(trytes){
         if(queueTimer < 10){
             queueTimer = 0;
         }
-        emitToAll('lastPayout', {bundle: cacheBundle});
+        emitGlobalValues();
     });
 }
 
@@ -639,7 +639,7 @@ io.on('connection', function (socket) {
     });
     //When user complete boost PoW, send hash transaction to all clients
     socket.on('newWithdrawalConfirmation', function (data) {
-        emitToAll('lastPayout', {bundle: data.bundle});
+        emitGlobalValues();
     });
     socket.on('boostRequest', function () {
         socket.emit('announcement', "Boost is disabled. Thank you for your help");
