@@ -170,57 +170,60 @@ function getUserBalance(socket, address){
             if(data.error){
                 console.log(new Date().toISOString()+" Unknown address!");
                 socket.emit('announcement', "Unknown address");
-                resetPayout();
-                return;
-            }
-            console.log(data);
-            // We can´t payout 0 value reward
-            var valuePayout = Math.floor(data.balance*hashIotaRatio);
-            if((parseInt(cacheTotalValue)+parseInt(valuePayout)) < cacheBalance){
-                cacheTotalValue += valuePayout;
-                if(valuePayout > 0){
-                    var destinationAddress;
-                    var userName = address;
-                    // Get only 81-trytes address format for sending
-                    // Check if username is valid address
-                    if(isAddress(userName)){
-                        // Check if address is 81-trytes address
-                        if(isHash(userName)){
-                            destinationAddress = userName;
-                        } else { // If is address with checksum do check
-                            if(isValidChecksum(userName)){
-                                // If is address correct, remove checksum
-                                destinationAddress = noChecksum(userName);
-                            } else {
-                                console.log(new Date().toISOString()+" invalid checksum: ");
-                                console.log(userName);
+                // Skip this user and continue
+                countUsersForPayout = parseInt(countUsersForPayout) - 1;
+                getUserForPayout();
+            }  else {
+                console.log(data);
+                // We can´t payout 0 value reward
+                var valuePayout = Math.floor(data.balance*hashIotaRatio);
+                if((parseInt(cacheTotalValue)+parseInt(valuePayout)) < cacheBalance){
+                    cacheTotalValue += valuePayout;
+                    if(valuePayout > 0){
+                        var destinationAddress;
+                        var userName = address;
+                        // Get only 81-trytes address format for sending
+                        // Check if username is valid address
+                        if(isAddress(userName)){
+                            // Check if address is 81-trytes address
+                            if(isHash(userName)){
+                                destinationAddress = userName;
+                            } else { // If is address with checksum do check
+                                if(isValidChecksum(userName)){
+                                    // If is address correct, remove checksum
+                                    destinationAddress = noChecksum(userName);
+                                } else {
+                                    console.log(new Date().toISOString()+" invalid checksum: ");
+                                    console.log(userName);
+                                }
                             }
                         }
+                        cacheTransfers.push({
+                            "address" : destinationAddress,
+                            "value"  : parseInt(valuePayout),
+                            "message" : "MINEIOTADOTCOM9MANUAL9PAYOUT",
+                            'tag': "MINEIOTADOTCOM"
+                        });
+                        //When transaction is confirmed, reset coinhive balance
+                        cacheResetUsersBalance.push({"name":userName,"amount":data.balance});
                     }
-                    cacheTransfers.push({
-                        "address" : destinationAddress,
-                        "value"  : parseInt(valuePayout),
-                        "message" : "MINEIOTADOTCOM9MANUAL9PAYOUT",
-                        'tag': "MINEIOTADOTCOM"
-                    });
-                    //When transaction is confirmed, reset coinhive balance
-                    cacheResetUsersBalance.push({"name":userName,"amount":data.balance});
-                }
-                getUserForPayout();
-            } else {
-                // We have already some transfer data break to prepareLocalTransfers
-                if(cacheTransfers.length > 0){
-                    // Send prepared transfers if no more balance for next
-                    console.log("Total value for balance is low: " + cacheTotalValue);
-                    config.debug && console.log(cacheTransfers);
-                    prepareLocalTransfers();
+                    getUserForPayout();
                 } else {
-                    console.log(new Date().toISOString()+" No more balance for next payout!");
-                    resetPayout();
+                    // We have already some transfer data break to prepareLocalTransfers
+                    if(cacheTransfers.length > 0){
+                        // Send prepared transfers if no more balance for next
+                        console.log("Total value for balance is low: " + cacheTotalValue);
+                        config.debug && console.log(cacheTransfers);
+                        prepareLocalTransfers();
+                    } else {
+                        console.log(new Date().toISOString()+" No more balance for next payout!");
+                        resetPayout();
+                    }
                 }
             }
         } else {
-            resetPayout();
+            // Repeat
+            getUserBalance(socket, address);
         }
     });
 
