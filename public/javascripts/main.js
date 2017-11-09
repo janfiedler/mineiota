@@ -18,10 +18,6 @@ $( document ).ready(function() {
 
     const tangleAddressExplorers = [
         {
-            name: 'open-iota.prizziota.com',
-            urlAddress: 'http://open-iota.prizziota.com/#/search/address/'
-        },
-        {
             name: 'iotasear.ch',
             urlAddress: 'https://iotasear.ch/address/'
         },
@@ -29,12 +25,12 @@ $( document ).ready(function() {
             name: 'thetangle.org',
             urlAddress: 'https://thetangle.org/address/'
         },
-    ]
-    const tangleBundleExplorers = [
         {
             name: 'open-iota.prizziota.com',
-            urlAddress: 'http://open-iota.prizziota.com/#/search/bundle/'
-        },
+            urlAddress: 'http://open-iota.prizziota.com/#/search/address/'
+        }
+    ]
+    const tangleBundleExplorers = [
         {
             name: 'iotasear.ch',
             urlAddress: 'https://iotasear.ch/bundle/'
@@ -43,6 +39,10 @@ $( document ).ready(function() {
             name: 'thetangle.org',
             urlAddress: 'https://thetangle.org/bundle/'
         },
+        {
+            name: 'open-iota.prizziota.com',
+            urlAddress: 'http://open-iota.prizziota.com/#/search/bundle/'
+        }
     ]
 
     var MinerUI = function(miner, elements) {
