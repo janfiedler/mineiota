@@ -538,12 +538,12 @@ function checkNodeLatestMilestone(){
 function isAddressAttachedToTangle(address,callback) {
     iota.api.findTransactions({"addresses":Array(address)}, function (errors, success) {
         if (success.length === 0) {
-            config.debug && console.log(new Date().toISOString()+' Error: '+address+' is not attached to tangle! ');
+            //config.debug && console.log(new Date().toISOString()+' Error: '+address+' is not attached to tangle! ');
             callback(false);
         } else {
             iota.api.getLatestInclusion(success, function (errors, success) {
                 if (success.length === 0) {
-                    config.debug && console.log(new Date().toISOString()+' Error: '+address+' is not attached to tangle! ');
+                    //config.debug && console.log(new Date().toISOString()+' Error: '+address+' is not attached to tangle! ');
                     callback(false);
                 } else {
                     //
@@ -553,7 +553,7 @@ function isAddressAttachedToTangle(address,callback) {
                             return;
                         }
                     }
-                    config.debug && console.log(new Date().toISOString()+' Error: '+address+' is not attached to tangle! ');
+                    //config.debug && console.log(new Date().toISOString()+' Error: '+address+' is not attached to tangle! ');
                     callback(false);
                 }
             })
@@ -637,7 +637,7 @@ io.on('connection', function (socket) {
                 if(result === true){
                     fn({done:1,publicKey:config.coinhive.publicKey,username:data.address});
                 } else {
-                    console.log('Finished, is not attached to tangle');
+                    console.log('Error login: '+data.address+' is not attached to tangle');
                     fn({done:-1});
                 }
             });
@@ -691,7 +691,7 @@ io.on('connection', function (socket) {
                         // Now update queue position for all users
                         sendQueuePosition();
                     } else {
-                        console.log('Finished, '+fullAddress+'address is not attached to tangle');
+                        console.log('Error withdraw: '+fullAddress+' address is not attached to tangle');
                         fn({done:0});
                     }
                 });
