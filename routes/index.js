@@ -247,7 +247,6 @@ function getTopUsers(count){
                                 if(user.name === userName){
                                     console.log(new Date().toISOString()+" Duplicate payout in cacheResetUsersBalance!");
                                     skipDuplicate = true;
-                                    break;
                                 }
                             });
                         }
