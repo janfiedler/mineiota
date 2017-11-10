@@ -490,12 +490,11 @@ function doPow(trytes){
         // Receive results from child process
         // Get completed transaction info
         // Get only hash from attached transaction
-        if(trytesResult.error !== 'undefined'){
+        if(trytesResult.error === 1){
             config.debug && console.log(new Date().toISOString()+ " Error: doPow");
             config.debug && console.log(trytesResult);
             resetPayout();
-        }
-        else if(typeof trytesResult[0].bundle !== 'undefined') {
+        } else if(typeof trytesResult[0].bundle !== 'undefined') {
             cacheBundle = trytesResult[0].bundle;
         } else {
             config.debug && console.log(trytesResult);
