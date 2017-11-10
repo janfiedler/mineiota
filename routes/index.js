@@ -489,19 +489,20 @@ function doPow(trytes){
     powWorker.on('message', function(trytesResult) {
         // Receive results from child process
         // Get completed transaction info
-        //config.debug && console.log(trytesResult);
         // Get only hash from attached transaction
-        cacheBundle = trytesResult[0].bundle;
+        if(typeof trytesResult[0].bundle !== 'undefined') {
+            cacheBundle = trytesResult[0].bundle;
+        } else {
+            config.debug && console.log(new Date().toISOString()+ " Error: doPow");
+            config.debug && console.log(trytesResult);
+        }
         config.debug && console.log("Success: bundle from attached transactions " + cacheBundle);
         powWorker.kill();
     });
     powWorker.on('close', function () {
         config.debug && console.log(new Date().toISOString()+' Closing PoW worker');
         config.debug && console.timeEnd('pow-time');
-        // Only if this is first doPoW until 5 minutes reset timer, for get exactly 10 min for confirmation
-        if(queueTimer < 10){
-            queueTimer = 0;
-        }
+
         emitGlobalValues();
     });
 }
