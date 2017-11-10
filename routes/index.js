@@ -142,11 +142,12 @@ function getUserForPayout(){
         countUsersForPayout++;
         // Remove socket id and socket for waiting list
         var queueId = queueIds.shift();
-        config.debug && console.log(new Date().toISOString() + " Withdrawal in progress for " + queueId);
+
         var socket = queueSockets.shift();
         // Remove used address from array (get right position in queue)
         var userName = queueAddresses.shift();
 
+        config.debug && console.log(new Date().toISOString() + " Withdrawal in progress for " + userName);
         getUserBalance(socket, userName);
     }
     /* Temporarily suspended automatic payouts
