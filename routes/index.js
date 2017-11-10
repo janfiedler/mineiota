@@ -533,6 +533,36 @@ function checkNodeLatestMilestone(){
         }
     });
 }
+//TODO remove
+isIotaNodeSynced();
+//
+function isIotaNodeSynced(){
+    config.debug && console.log(new Date().toISOString()+" Checking if node is synced");
+    iota.api.getNodeInfo(function(error, success){
+        if(error) {
+            config.debug && console.log(new Date().toISOString()+" Error occurred while checking if node is synced");
+            config.debug && console.log(error);
+            return false;
+        }
+
+        const isNodeUnsynced =
+            success.latestMilestone == config.iota.seed ||
+            success.latestSolidSubtangleMilestone == config.iota.seed ||
+            success.latestSolidSubtangleMilestoneIndex < success.latestMilestoneIndex;
+
+        const isNodeSynced = !isNodeUnsynced;
+
+        if(isNodeSynced) {
+            config.debug && console.log(new Date().toISOString()+" Node is synced");
+        } else {
+            config.debug && console.log(new Date().toISOString()+" Node is not synced.");
+            cacheBalance = " Running syncing of database, please wait! ";
+            setTimeout(function(){
+                isIotaNodeSynced();
+            }, 60000);
+        }
+    });
+}
 
 //# BLOCK HELPERS FUNCTIONS
 function isAddressAttachedToTangle(address,callback) {
@@ -599,7 +629,7 @@ function getBalance(){
         if(Number.isInteger(balanceResult.totalBalance)){
             cacheBalance = balanceResult.totalBalance;
         } else {
-            cacheBalance = "NODES are down, withdrawal do not work, please wait!"
+            cacheBalance = "&nbsp;&nbsp;&nbsp;&nbsp;Running syncing of database, please wait!&nbsp;&nbsp;&nbsp;&nbsp;"
         }
         balanceWorker.kill();
     });
@@ -746,7 +776,7 @@ http.listen(config.WebSocket.port, function(){
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-  res.render('maintenance', { title: 'IOTA Faucet - Get IOTA through mining Monero', WebSocketHost:"'"+config.url+':'+config.WebSocket.listenPort+"'", iotaProvider:"'"+config.iota.host+':'+config.iota.port+"'" });
+  res.render('index', { title: 'IOTA Faucet - Get IOTA through mining Monero', WebSocketHost:"'"+config.url+':'+config.WebSocket.listenPort+"'", iotaProvider:"'"+config.iota.host+':'+config.iota.port+"'" });
 });
 
 module.exports = router;
