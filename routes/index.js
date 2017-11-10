@@ -771,7 +771,8 @@ io.on('connection', function (socket) {
                 fn({done:0});
             }
         } else {
-            config.debug && console.log(new Date().toISOString()+' Error: double click on withdraw');
+            fn({done:-2});
+            config.debug && console.log(new Date().toISOString()+' Error: multi click on withdraw');
         }
 
 

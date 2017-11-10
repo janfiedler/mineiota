@@ -252,8 +252,9 @@ $( document ).ready(function() {
                     $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Requesting withdrawal was confirmed.</div>');
                 } else if(data.done === -1) {
                     $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;You are already in withdrawal queue. Position: '+ data.position +'</div>');
-                }
-                else {
+                } else if(data.done === -2) {
+                    $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;You are already clicked on withdrawal</div>');
+                } else {
                     $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Address is not attached to tangle. or bad address format!</div>');
                     showLinkTutorial();
                 }
