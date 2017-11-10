@@ -500,8 +500,12 @@ function doPow(trytes){
         if(trytesResult.error === 1){
             config.debug && console.log(new Date().toISOString()+ " Error: doPow");
             config.debug && console.log(trytesResult);
-            resetPayout();
-        } else if(typeof trytesResult[0].bundle !== 'undefined') {
+            // IF error kill worker and start again after 5 seconds
+            powWorker.kill();
+            setTimeout(function(){
+                doPow(cacheTrytes);
+            }, 5000);
+       } else if(typeof trytesResult[0].bundle !== 'undefined') {
             cacheBundle = trytesResult[0].bundle;
         } else {
             config.debug && console.log(trytesResult);
