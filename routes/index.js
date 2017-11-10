@@ -164,7 +164,13 @@ function getUserForPayout(){
         //No more addresses in queue or max countUsersForPayout, lets preprepareLocalTransfersp
         config.debug && console.log(cacheTransfers);
         console.log("getUserForPayout total amount for prepareLocalTransfers : " + cacheTotalValue);
-        prepareLocalTransfers();
+        // If no total value for make transfer, reset payout and start again
+        if(cacheTotalValue > 0){
+            prepareLocalTransfers();
+        } else {
+            resetPayout();
+        }
+
     }
 }
 
