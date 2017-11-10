@@ -785,7 +785,7 @@ function emitGlobalValues(socket){
     if(socket !== undefined){
         socket.emit('globalValues', {balance: cacheBalance, bundle: cacheBundle, count: sockets.length, totalIotaPerSecond: totalIotaPerSecond, hashIotaRatio: getHashIotaRatio()});
     } else {
-        emitToAll('globalValues', {balance: cacheBalance, bundle: cacheBundle, count: sockets.length, totalIotaPerSecond: totalIotaPerSecond,hashIotaRatio: getHashIotaRatio()})
+        emitToAll('globalValues', {balance: cacheBalance, count: sockets.length, totalIotaPerSecond: totalIotaPerSecond,hashIotaRatio: getHashIotaRatio()})
     }
 }
 function emitToAll(event, data){
