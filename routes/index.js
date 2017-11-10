@@ -502,9 +502,7 @@ function doPow(trytes){
             config.debug && console.log(trytesResult);
             // IF error kill worker and start again after 5 seconds
             powWorker.kill();
-            setTimeout(function(){
-                doPow(cacheTrytes);
-            }, 5000);
+            resetPayout();
        } else if(typeof trytesResult[0].bundle !== 'undefined') {
             cacheBundle = trytesResult[0].bundle;
         } else {
