@@ -224,7 +224,6 @@ $( document ).ready(function() {
     $("#resumeMining").click(function() {
         $(this).hide();
         $('#stopMining').show();
-        $('#withdraw').show();
         $("#iotaPerSecond").text('');
         $('#mySpinnerProfitability').show();
         if (!miner.isRunning()) {
@@ -241,7 +240,6 @@ $( document ).ready(function() {
         }
     });
     $("#withdraw").click(function () {
-        $('#withdraw').hide();
         iotaAddress = $("#iotaAddress").val();
         if(iotaAddress != ''){
             const tangleExplorerAddressLinks = tangleAddressExplorers.map(function(tangleExplorer) {
@@ -502,7 +500,6 @@ $( document ).ready(function() {
                 var theTangleOrgUrl = 'https://thetangle.org/bundle/'+success[0].bundle;
                 $('#mineLog').prepend('<div><small>'+new Date().toISOString()+': &nbsp;&nbsp;<a href="'+theTangleOrgUrl+'" target="_blank">'+theTangleOrgUrl+'</a></small></div>');
                 //After withdrawal process is done, can start again.
-                $('#withdraw').show();
                 $('#resumeMining').show();
                 emitPayout(success[0].bundle);
                 // Send joby is done
