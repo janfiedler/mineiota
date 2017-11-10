@@ -534,7 +534,7 @@ function checkNodeLatestMilestone(){
     });
 }
 //TODO remove
-isIotaNodeSynced();
+//isIotaNodeSynced();
 //
 function isIotaNodeSynced(){
     config.debug && console.log(new Date().toISOString()+" Checking if node is synced");
