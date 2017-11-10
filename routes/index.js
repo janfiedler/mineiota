@@ -595,7 +595,6 @@ function isAddressAttachedToTangle(address,callback) {
     if(isAddress(address)){
     iota.api.findTransactions({"addresses":new Array(address)}, function (errors, success) {
         if(!errors){
-            console.log(success);
             if (success.length === 0) {
                 //config.debug && console.log(new Date().toISOString()+' Error: '+address+' is not attached and confirmed to tangle! ');
                 callback(false);
