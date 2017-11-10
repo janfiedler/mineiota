@@ -274,16 +274,23 @@ $( document ).ready(function() {
         socket.emit('newWithdrawalConfirmation', {bundle: bundle});
     }
     socket.on('globalValues', function (data) {
-        balance = data.balance;
-        hashIotaRatio = data.hashIotaRatio;
-        document.getElementById("faucetBalance").innerText = document.createTextNode(balance).textContent;
-        $('#minersOnline').html('<span>miners online: <strong>'+data.count+'</strong></span>');
-        if(typeof data.bundle !== 'undefined') {
+        if(typeof data.hashIotaRatio !== 'undefined'){
+            hashIotaRatio = data.hashIotaRatio;
+        }
+        if(typeof data.balance !== 'undefined'){
+            balance = data.balance;
+            document.getElementById("faucetBalance").innerText = document.createTextNode(balance).textContent;
+        }
+        if(typeof data.count !== 'undefined'){
+            $('#minersOnline').html('<span>miners online: <strong>'+data.count+'</strong></span>');
+        }
+        if(typeof data.bundle !== 'undefined'){
             const tangleExplorerBundleLinks = tangleBundleExplorers.map(function(tangleExplorer) {
                 return "<a href=\'"+tangleExplorer.urlAddress+data.bundle+"' target='_blank'>"+tangleExplorer.name+"</a>";
             }).join(' – ');
-            $('#lastPayout').html('<small>'+new Date().toISOString()+' '+tangleExplorerBundleLinks+'</small>');        }
-        if(data.totalIotaPerSecond > 0){
+            $('#lastPayout').html('<small>'+new Date().toISOString()+' '+tangleExplorerBundleLinks+'</small>');
+        }
+        if(typeof data.totalIotaPerSecond !== 'undefined' && data.totalIotaPerSecond > 0){
             $('#totalSpeed').html('<span>total speed: <strong>'+data.totalIotaPerSecond+'</strong> iota/s</span>');
         }
         //console.log(data);

@@ -8,6 +8,10 @@ var router = express.Router();
 var env = process.env.NODE_ENV || 'development';
 var config = require('../config')[env];
 
+// External proof of work test
+//var ffi = require('ffi');
+//var fs = require('fs');
+//
 var sockets = [];
 var xmrToBtc = 0;
 var miotaToBtc = 0;
@@ -60,11 +64,16 @@ getXmrToBtc();
 getIotaToBtc();
 
 setInterval(function () {
+    // Get actual iota/s speed
+    getTotalIotaPerSecond();
     getPayoutPer1MHashes();
     getXmrToBtc();
     getIotaToBtc();
-    // Get actual iota/s speed
-    getTotalIotaPerSecond();
+
+    // Wait 5 seconds and send new data to users
+    setTimeout(function(){
+        emitGlobalValues("", "variables");
+    }, 5000);
 }, 60000);
 
 // #BLOCK GET ALL NEEDED DATA FOR CALCULATE PAYOUT
@@ -519,7 +528,7 @@ function doPow(trytes){
         if(queueTimer < 10){
             queueTimer = 0;
         }
-        emitGlobalValues();
+        emitGlobalValues("", "bundle");
     });
 }
 
@@ -583,29 +592,39 @@ function isIotaNodeSynced(){
 
 //# BLOCK HELPERS FUNCTIONS
 function isAddressAttachedToTangle(address,callback) {
-    iota.api.findTransactions({"addresses":Array(address)}, function (errors, success) {
-        if (success.length === 0) {
-            //config.debug && console.log(new Date().toISOString()+' Error: '+address+' is not attached and confirmed to tangle! ');
-            callback(false);
-        } else {
-            iota.api.getLatestInclusion(success, function (errors, success) {
-                if (success.length === 0) {
-                    //config.debug && console.log(new Date().toISOString()+' Error: '+address+' is not attached and confirmed to tangle! ');
-                    callback(false);
-                } else {
-                    //
-                    for (var i = 0, len = success.length; i < len; i++) {
-                        if(success[i] === true){
-                            callback(true);
-                            return;
+    if(isAddress(address)){
+    iota.api.findTransactions({"addresses":new Array(address)}, function (errors, success) {
+        if(!errors){
+            console.log(success);
+            if (success.length === 0) {
+                //config.debug && console.log(new Date().toISOString()+' Error: '+address+' is not attached and confirmed to tangle! ');
+                callback(false);
+            } else {
+                iota.api.getLatestInclusion(success, function (errors, success) {
+                    if (success.length === 0) {
+                        //config.debug && console.log(new Date().toISOString()+' Error: '+address+' is not attached and confirmed to tangle! ');
+                        callback(false);
+                    } else {
+                        //
+                        for (var i = 0, len = success.length; i < len; i++) {
+                            if(success[i] === true){
+                                callback(true);
+                                return;
+                            }
                         }
+                        //config.debug && console.log(new Date().toISOString()+' Error: '+address+' is not attached and confirmed to tangle! ');
+                        callback(false);
                     }
-                    //config.debug && console.log(new Date().toISOString()+' Error: '+address+' is not attached and confirmed to tangle! ');
-                    callback(false);
-                }
-            })
+                })
+            }
+        } else {
+            console.log(errors);
         }
     });
+    } else {
+        //config.debug && console.log(new Date().toISOString()+' Error: '+address+' is not iota format! ');
+        callback(false);
+    }
 }
 function isAddress(address){
     return iota.valid.isAddress(address);
@@ -654,7 +673,7 @@ function getBalance(){
         config.debug && console.log(new Date().toISOString()+' Closing balance worker');
         config.debug && console.timeEnd('balance-time');
         balanceInProgress = false;
-        emitGlobalValues();
+        emitGlobalValues("", "balance");
     });
 }
 
@@ -664,7 +683,8 @@ io.on('connection', function (socket) {
     sockets.push(socket);
 
     // Emit actual values to all users
-    emitGlobalValues();
+    emitGlobalValues(socket, "all");
+    emitGlobalValues("", "online");
     //Emit actual length of queue
     sendQueuePosition(socket);
 
@@ -674,7 +694,7 @@ io.on('connection', function (socket) {
         if(i != -1) {
             sockets.splice(i, 1);
         }
-        emitGlobalValues();
+        emitGlobalValues("", "online");
     });
 
     //When user set address check if is valid format
@@ -759,7 +779,7 @@ io.on('connection', function (socket) {
     });
     //When user complete boost PoW, send hash transaction to all clients
     socket.on('newWithdrawalConfirmation', function (data) {
-        emitGlobalValues();
+        emitGlobalValues("" ,"bundle");
     });
     socket.on('boostRequest', function () {
         socket.emit('announcement', "Boost is disabled. Thank you for your help");
@@ -779,13 +799,30 @@ io.on('connection', function (socket) {
     });
 });
 
-// Emit balance to connected user
-function emitGlobalValues(socket){
+// Emit global cache data to connected user
+function emitGlobalValues(socket, type){
+    var emitData = {};
+    switch(String(type)) {
+        case "all":
+            emitData = {balance: cacheBalance, bundle: cacheBundle, count: sockets.length, totalIotaPerSecond: totalIotaPerSecond, hashIotaRatio: getHashIotaRatio()};
+            break;
+        case "online":
+            emitData = {count: sockets.length};
+            break;
+        case "balance":
+            emitData = {balance: cacheBalance};
+            break
+        case "bundle":
+            emitData = {bundle: cacheBundle};
+        case "variables":
+            emitData = {totalIotaPerSecond: totalIotaPerSecond, hashIotaRatio: getHashIotaRatio()};
+            break
+    }
     // balance, last bundle, minerr online, hashIotaRatio
-    if(socket !== undefined){
-        socket.emit('globalValues', {balance: cacheBalance, bundle: cacheBundle, count: sockets.length, totalIotaPerSecond: totalIotaPerSecond, hashIotaRatio: getHashIotaRatio()});
+    if(socket !== ""){
+        socket.emit('globalValues', emitData);
     } else {
-        emitToAll('globalValues', {balance: cacheBalance, count: sockets.length, totalIotaPerSecond: totalIotaPerSecond,hashIotaRatio: getHashIotaRatio()})
+        emitToAll('globalValues', emitData)
     }
 }
 function emitToAll(event, data){
