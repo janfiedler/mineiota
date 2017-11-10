@@ -11,7 +11,7 @@ process.on('message', function(data) {
 
     iota.api.sendTrytes(data.trytes, 3, 14, function(error, success) {
         if (error) {
-            process.send(error);
+            process.send({error:error});
         } else {
             process.send(success);
         }

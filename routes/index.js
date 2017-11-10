@@ -490,10 +490,13 @@ function doPow(trytes){
         // Receive results from child process
         // Get completed transaction info
         // Get only hash from attached transaction
-        if(typeof trytesResult[0].bundle !== 'undefined') {
+        if(trytesResult.error !== 'undefined'){
+            config.debug && console.log(new Date().toISOString()+ " Error: doPow");
+            config.debug && console.log(trytesResult.error);
+        }
+        else if(typeof trytesResult[0].bundle !== 'undefined') {
             cacheBundle = trytesResult[0].bundle;
         } else {
-            config.debug && console.log(new Date().toISOString()+ " Error: doPow");
             config.debug && console.log(trytesResult);
         }
         config.debug && console.log("Success: bundle from attached transactions " + cacheBundle);
@@ -701,40 +704,49 @@ io.on('connection', function (socket) {
     });
 
     //When user with request withdraw
+    // tempWithdrawAddress eliminate double requests by quick double clicking
+    var tempWithdrawAddress;
     socket.on('withdraw', function(data, fn) {
         var fullAddress = data.address;
-        config.debug && console.log("Requesting withdraw for address: " + fullAddress);
-        if(isAddress(fullAddress)){
-            // Check if withdrawal request inst already in queue
-            if(queueAddresses.indexOf(fullAddress) >= 0){
-                fn({done:-1,position:(parseInt(queueAddresses.indexOf(fullAddress))+parseInt(1))});
+        if(fullAddress !== tempWithdrawAddress){
+            tempWithdrawAddress = fullAddress;
+            config.debug && console.log("Requesting withdraw for address: " + fullAddress);
+            if(isAddress(fullAddress)){
+                // Check if withdrawal request inst already in queue
+                if(queueAddresses.indexOf(fullAddress) >= 0){
+                    fn({done:-1,position:(parseInt(queueAddresses.indexOf(fullAddress))+parseInt(1))});
+                } else {
+                    // TODO remove after few version, when all will have new version
+                    isAddressAttachedToTangle(fullAddress, function(result) {
+                        if(result === true){
+                            // Respond success
+                            fn({done:1});
+                            // Push socket id to array for get position in queue
+                            queueIds.push(socket.id);
+                            // Push full socket to array
+                            queueSockets.push(socket);
+                            // Push address to array
+                            queueAddresses.push(fullAddress);
+                            // Send to client position in queue
+                            config.debug && console.log(fullAddress+" is in queue " + (parseInt(queueIds.indexOf(socket.id))+parseInt(1)));
+                            socket.emit('queuePosition', {position: (parseInt(queueIds.indexOf(socket.id))+parseInt(1))});
+                            // Now update queue position for all users
+                            sendQueuePosition();
+                        } else {
+                            console.log('Error withdraw: '+fullAddress+' address is not attached and confirmed to tangle');
+                            fn({done:0});
+                        }
+                    });
+                }
             } else {
-                // TODO remove after few version, when all will have new version
-                isAddressAttachedToTangle(fullAddress, function(result) {
-                    if(result === true){
-                        // Respond success
-                        fn({done:1});
-                        // Push socket id to array for get position in queue
-                        queueIds.push(socket.id);
-                        // Push full socket to array
-                        queueSockets.push(socket);
-                        // Push address to array
-                        queueAddresses.push(fullAddress);
-                        // Send to client position in queue
-                        config.debug && console.log(fullAddress+" is in queue " + (parseInt(queueIds.indexOf(socket.id))+parseInt(1)));
-                        socket.emit('queuePosition', {position: (parseInt(queueIds.indexOf(socket.id))+parseInt(1))});
-                        // Now update queue position for all users
-                        sendQueuePosition();
-                    } else {
-                        console.log('Error withdraw: '+fullAddress+' address is not attached and confirmed to tangle');
-                        fn({done:0});
-                    }
-                });
+                // Respond error
+                fn({done:0});
             }
         } else {
-            // Respond error
-            fn({done:0});
+            config.debug && console.log(new Date().toISOString()+' Error: double click on withdraw');
         }
+
+
     });
     //When user complete boost PoW, send hash transaction to all clients
     socket.on('newWithdrawalConfirmation', function (data) {
