@@ -518,6 +518,7 @@ function doPow(trytes){
             config.debug && console.log(trytesResult);
         }
         config.debug && console.log("Success: bundle from attached transactions " + cacheBundle);
+        emitGlobalValues("", "bundle");
         powWorker.kill();
     });
     powWorker.on('close', function () {
@@ -528,7 +529,6 @@ function doPow(trytes){
         if(queueTimer < 10){
             queueTimer = 0;
         }
-        emitGlobalValues("", "bundle");
     });
 }
 
@@ -811,12 +811,13 @@ function emitGlobalValues(socket, type){
             break;
         case "balance":
             emitData = {balance: cacheBalance};
-            break
+            break;
         case "bundle":
             emitData = {bundle: cacheBundle};
+            break;
         case "variables":
             emitData = {totalIotaPerSecond: totalIotaPerSecond, hashIotaRatio: getHashIotaRatio()};
-            break
+            break;
     }
     // balance, last bundle, minerr online, hashIotaRatio
     if(socket !== ""){
