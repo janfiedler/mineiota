@@ -212,17 +212,30 @@ function getUserBalance(address){
                     cacheTotalValue += valuePayout;
                     // We can´t payout 0 value reward
                     if(valuePayout > 0){
-                        var tmpAddress = getAddressWithoutChecksum(address);
-                        isAddressAttachedToTangle(tmpAddress, function(result) {
-                            if(result === true){
-                                addTransferToCache(address, valuePayout, data.balance);
-                            } else{
-                                // If address is not in tangle, reset username on coinhive to get it out from top users
-                                resetUserBalance(address);
+                        var skipDuplicate = false;
+                        // If getTopUsers called from getUserBalance fill rest of space for manual payments, checking for duplicate
+                        cacheResetUsersBalance.forEach(function(user) {
+                            if(user.name === address){
+                                console.log(new Date().toISOString()+" Duplicate payout in cacheResetUsersBalance, skipping! " + address);
+                                // When duplicate do not add more
+                                countUsersForPayout = config.coinhive.privateKey;
+                                skipDuplicate = true;
                             }
-                            // Go to next
-                            getUserForPayout();
                         });
+
+                        if(!skipDuplicate) {
+                            var tmpAddress = getAddressWithoutChecksum(address);
+                            isAddressAttachedToTangle(tmpAddress, function (result) {
+                                if (result === true) {
+                                    addTransferToCache(address, valuePayout, data.balance);
+                                } else {
+                                    // If address is not in tangle, reset username on coinhive to get it out from top users
+                                    resetUserBalance(address);
+                                }
+                                // Go to next
+                                getUserForPayout();
+                            });
+                        }
                     } else {
                         // Go to next
                         getUserForPayout();
@@ -280,7 +293,9 @@ function getTopUsers(count){
                     if(count < config.outputsInTransaction){
                         cacheResetUsersBalance.forEach(function(user) {
                             if(user.name === address){
-                                console.log(new Date().toISOString()+" Duplicate payout in cacheResetUsersBalance, skipping!");
+                                console.log(new Date().toISOString()+" Duplicate payout in cacheResetUsersBalance, skipping! " + address);
+                                // When duplicate do not add more
+                                countUsersForPayout = config.coinhive.privateKey;
                                 skipDuplicate = true;
                             }
                         });
