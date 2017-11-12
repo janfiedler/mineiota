@@ -409,14 +409,14 @@ function isReattachable(){
                 // We are done, unset the cache values
                 resetPayout();
 
-            }   else if (parseInt(queueTimer) >= parseInt(60) && parseInt(queueAddresses.length) > 0) {
-                // In transaction is not confirmed after 30 minutes, skipping to the next in queue
+            }   else if (parseInt(queueTimer) >= parseInt(90) && parseInt(queueAddresses.length) > 0) {
+                // In transaction is not confirmed after 45 minutes, skipping to the next in queue
                 config.debug && console.log(new Date().toISOString() + 'Error: Transaction is not confirmed after 30 minutes, skipping to the next in queue');
                 // Error: Transaction is not confirmed, resetPayout
                 resetPayout();
-            } else if (isInteger(parseInt(queueTimer)/parseInt(20))) {
+            } else if (isInteger(parseInt(queueTimer)/parseInt(30))) {
                 // Add one minute to queue timer
-                // On every 5 minutes in queue, sdo PoW again
+                // On every 15 minutes in queue, sdo PoW again
                 config.debug && console.log(new Date().toISOString()+' Failed: Do PoW again ');
                 // Call proof of work from cacheTrytes
                 callPoW();
