@@ -180,8 +180,6 @@ function getUserForPayout(){
         }
     }
     else if(withdrawalInProgress) {
-        // Send to waiting sockets in queue their position
-        sendQueuePosition();
         //No more addresses in queue or max countUsersForPayout, lets preprepareLocalTransfersp
         config.debug && console.log(new Date().toISOString()+" getUserForPayout transactions in cacheTransfers: " + cacheTransfers.length);
         config.debug && console.log(new Date().toISOString()+" getUserForPayout total amount for prepareLocalTransfers : " + cacheTotalValue);
