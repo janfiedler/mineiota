@@ -154,6 +154,9 @@ td {
   display: inline-block;
   margin: 0px 10px;
 }
+#rewardNote{
+  font-size: 10px;
+}
 
 .spinner:before {
   content: '';

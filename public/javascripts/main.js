@@ -5,6 +5,7 @@ $( document ).ready(function() {
     var username = null;
     var balance = 0;
     var hashIotaRatio = 0;
+    var iotaUSD = 0;
     var iotaAddress = null;
     //PoW curl block
     const iotaLib = window.IOTA;
@@ -128,7 +129,7 @@ $( document ).ready(function() {
         socket.emit('getUserActualBalance', {address: iotaAddress}, function (data) {
             //console.log(data);
             if (data.done == 1) {
-                $("#mineSum").text(data.balance);
+                $("#mineSum").html("Unpaid reward: " +data.balance + " IOTA <small>($"+ (data.balance*iotaUSD).toFixed(10)+" USD)</small>");
                 $("#dateSum").html('<small>'+new Date().toISOString()+': (refresh every 60 seconds)</small>');
             } else {
                 $("#mineSum").text(0);
@@ -201,7 +202,9 @@ $( document ).ready(function() {
                         $('#mySpinnerProfitability').hide();
                         var hps = miner.getHashesPerSecond();
                         $("#iotaPerSecond").text((hps*hashIotaRatio).toFixed(4));
-                        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;<strong>'+ Math.floor(256*hashIotaRatio) +'</strong> IOTA rewarded for your mining.</div>');
+                        var iotaReward = (256*hashIotaRatio);
+                        var usdReward = iotaReward * iotaUSD;
+                        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+': 256 XMR hash mined and accepted.</small> Your reward: <strong>'+ iotaReward.toFixed(10) +'</strong> IOTA <small>($'+usdReward.toFixed(10)+' USD)</small></div>');
                     });
                 } else {
                     $('#setAddress').show();
@@ -277,6 +280,9 @@ $( document ).ready(function() {
     socket.on('globalValues', function (data) {
         if(typeof data.hashIotaRatio !== 'undefined'){
             hashIotaRatio = data.hashIotaRatio;
+        }
+        if(typeof data.iotaUSD !== 'undefined'){
+            iotaUSD = data.iotaUSD;
         }
         if(typeof data.balance !== 'undefined'){
             balance = data.balance;
