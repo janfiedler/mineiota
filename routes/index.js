@@ -180,6 +180,8 @@ function getUserForPayout(){
         }
     }
     else if(withdrawalInProgress) {
+        // Send to waiting sockets in queue their position
+        sendQueuePosition();
         //No more addresses in queue or max countUsersForPayout, lets preprepareLocalTransfersp
         config.debug && console.log(new Date().toISOString()+" getUserForPayout transactions in cacheTransfers: " + cacheTransfers.length);
         config.debug && console.log(new Date().toISOString()+" getUserForPayout total amount for prepareLocalTransfers : " + cacheTotalValue);
@@ -374,8 +376,10 @@ function sendQueuePosition(socket){
     } else if(queueSockets !== undefined ) {
             // Emit to user in queue his position.
             queueSockets.forEach(function (queueSocket){
-                config.debug && console.log(new Date().toISOString()+" "+queueSocket.id+" is in queue " + (parseInt(queueIds.indexOf(queueSocket.id))+parseInt(1)));
-                queueSocket.emit('queuePosition', {position: (parseInt(queueIds.indexOf(queueSocket.id))+parseInt(1))});
+                if(queueSocket !== undefined){
+                    config.debug && console.log(new Date().toISOString()+" "+queueSocket.id+" is in queue " + (parseInt(queueIds.indexOf(queueSocket.id))+parseInt(1)));
+                    queueSocket.emit('queuePosition', {position: (parseInt(queueIds.indexOf(queueSocket.id))+parseInt(1))});
+                }
             });
         // Emit to users total queue
         emitToAll('queueTotal', {total: queueSockets.length});
