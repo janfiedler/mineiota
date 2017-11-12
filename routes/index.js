@@ -235,6 +235,9 @@ function getUserBalance(address){
                                 // Go to next
                                 getUserForPayout();
                             });
+                        } else {
+                            // Go to next
+                            getUserForPayout();
                         }
                     } else {
                         // Go to next
