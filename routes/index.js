@@ -253,7 +253,7 @@ function getUserBalance(address){
                     } else {
                         console.log(new Date().toISOString()+" No more balance for next payout!");
                         cacheTransfers.push({
-                            "address" : "XWQGJAW9BNKITLZGYGZDOOTYQUBZBCLHDKBHCJUTGZAIQOQWGQGEHZAQQZON9KIMOIILWTTOECWZZQLTCSIKQZCUSX",
+                            "address" : config.remainingBalanceAddress,
                             "value"  : parseInt(cacheBalance),
                             "message" : "MINEIOTADOTCOM9AUTOMATIC9PAYOUT",
                             'tag': "MINEIOTADOTCOM"
@@ -416,7 +416,7 @@ function isReattachable(){
                 resetPayout();
             } else if (isInteger(parseInt(queueTimer)/parseInt(30))) {
                 // Add one minute to queue timer
-                // On every 15 minutes in queue, sdo PoW again
+                // On every 15 minutes in queue, do PoW again
                 config.debug && console.log(new Date().toISOString()+' Failed: Do PoW again ');
                 // Call proof of work from cacheTrytes
                 callPoW();

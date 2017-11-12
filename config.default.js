@@ -4,6 +4,8 @@ var config = {
         port: 3000,
         url: 'http://127.0.0.1',
         outputsInTransaction: 10,
+        // Address where to send rest of funds if balance is lower for next payment
+        remainingBalanceAddress: '',
         // IOTA Provider details
         iota: {
             host:   'https://yournode.com',
@@ -30,6 +32,8 @@ var config = {
         port: 3000,
         url: 'https://yourwebsite.com',
         outputsInTransaction: 10,
+        // Address where to send rest of funds if balance is lower for next payment
+        remainingBalanceAddress: '',
         // IOTA Provider details
         iota: {
             host:   'https://yournode.com',
