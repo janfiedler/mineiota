@@ -62,4 +62,5 @@ typings/
 config.js
 package-lock.json
 /filedb/keyIndex.json
+/filedb/trytes.json
 
