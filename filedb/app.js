@@ -3,7 +3,7 @@ var fs = require('fs');
 const folder = "filedb/";
 // ========
 module.exports = {
-    read: function (table) {
+    select: function (table) {
         return JSON.parse(fs.readFileSync(folder+table+'.json', 'utf8'));
     },
     update: function (table, json) {

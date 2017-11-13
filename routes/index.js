@@ -38,7 +38,7 @@ var cacheTotalValue = 0;
 // Count loops in queue
 var queueTimer = 0;
 // ini table structure from file database
-var tableKeyIndex = db.read("keyIndex");
+var tableKeyIndex = db.select("keyIndex");
 // Check to config for init data
 if(tableKeyIndex.data < config.iota.keyIndexStart){
     tableKeyIndex.data = config.iota.keyIndexStart;
@@ -337,7 +337,7 @@ function prepareLocalTransfers(){
     // Worker for prepare TRYTES transfer
     var transferWorker = cp.fork('workers/transfer.js');
 
-    transferWorker.send({keyIndex:db.read("keyIndex").data});
+    transferWorker.send({keyIndex:db.select("keyIndex").data});
     transferWorker.send({totalValue:cacheTotalValue});
     transferWorker.send(cacheTransfers);
 
@@ -668,7 +668,7 @@ function getBalance(){
     var balanceWorker = cp.fork('workers/balance.js');
     // Send child process work to get IOTA balance
     //We pass to worker keyIndex where start looking for funds
-    balanceWorker.send({keyIndex:db.read("keyIndex").data});
+    balanceWorker.send({keyIndex:db.select("keyIndex").data});
 
     balanceWorker.on('message', function(balanceResult) {
         // Receive results from child process
