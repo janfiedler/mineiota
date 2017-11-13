@@ -10,8 +10,10 @@ var config = require('../config')[env];
 
 // External proof of work test
 //var ffi = require('ffi');
-//var fs = require('fs');
-//
+var fs = require('fs');
+
+var db = require('../filedb/app');
+
 var sockets = [];
 var xmrToBtc = 0;
 var miotaToBtc = 0;
@@ -26,8 +28,6 @@ var queueIds = [];
 var queueSockets = [];
 var queueAddresses = [];
 var countUsersForPayout = 0;
-// Important for speed, check api getInputs
-var keyIndexStart = config.iota.keyIndexStart;
 // cache global data
 var cacheBalance = 0;
 var cacheResetUsersBalance = [];
@@ -37,6 +37,13 @@ var cacheTransfers = [];
 var cacheTotalValue = 0;
 // Count loops in queue
 var queueTimer = 0;
+// ini table structure from file database
+var tableKeyIndex = db.read("keyIndex");
+// Check to config for init data
+if(tableKeyIndex.data < config.iota.keyIndexStart){
+    tableKeyIndex.data = config.iota.keyIndexStart;
+    db.update("keyIndex", tableKeyIndex);
+}
 
 // List of https providers
 const httpsProviders = [
@@ -330,7 +337,7 @@ function prepareLocalTransfers(){
     // Worker for prepare TRYTES transfer
     var transferWorker = cp.fork('workers/transfer.js');
 
-    transferWorker.send({keyIndex:keyIndexStart});
+    transferWorker.send({keyIndex:db.read("keyIndex").data});
     transferWorker.send({totalValue:cacheTotalValue});
     transferWorker.send(cacheTransfers);
 
@@ -346,7 +353,8 @@ function prepareLocalTransfers(){
 
             //We store actual keyIndex for next faster search and transaction
             if(typeof result.keyIndex !== 'undefined'){
-                keyIndexStart = result.keyIndex;
+                tableKeyIndex.data = result.keyIndex;
+                db.update("keyIndex", tableKeyIndex);
                 config.debug && console.log(new Date().toISOString()+' Transfer: store actual keyIndex: '+result.keyIndex);
             }
             if(typeof result.inputAddress !== 'undefined'){
@@ -660,14 +668,15 @@ function getBalance(){
     var balanceWorker = cp.fork('workers/balance.js');
     // Send child process work to get IOTA balance
     //We pass to worker keyIndex where start looking for funds
-    balanceWorker.send({keyIndexStart:keyIndexStart});
+    balanceWorker.send({keyIndex:db.read("keyIndex").data});
 
     balanceWorker.on('message', function(balanceResult) {
         // Receive results from child process
         config.debug && console.log(balanceResult);
         if(typeof balanceResult.inputs !== 'undefined' && balanceResult.inputs.length > 0){
             //We store actual keyIndex for next faster search and transaction
-            keyIndexStart = balanceResult.inputs[0].keyIndex;
+            tableKeyIndex.data = balanceResult.inputs[0].keyIndex;
+            db.update("keyIndex", tableKeyIndex);
             config.debug && console.log(new Date().toISOString()+' Balance: store actual keyIndex: '+balanceResult.inputs[0].keyIndex);
         }
         config.debug && console.log(new Date().toISOString()+" Faucet balance: " + balanceResult.totalBalance);

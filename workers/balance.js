@@ -10,7 +10,7 @@ var iota = new IOTA({
 process.on('message', function(data) {
     //Set custom options for faster search by index
     var options = {
-        'start': parseInt(data.keyIndexStart),
+        'start': parseInt(data.keyIndex),
         'security': parseInt(2)
     };
     iota.api.getInputs(config.iota.seed, options, function(error, inputsData) {
