@@ -61,6 +61,4 @@ typings/
 #config.js mineiota
 config.js
 package-lock.json
-/filedb/keyIndex.json
-/filedb/trytes.json
 
