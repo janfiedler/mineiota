@@ -47,7 +47,7 @@ if(tableKeyIndex.data < config.iota.keyIndexStart){
 
 // List of https providers
 const httpsProviders = [
-    "https://iota.onlinedata.cloud:443"
+    "https://iota.onlinedata.cloud:14443"
 ];
 var _currentProvider = getRandomProvider();
 
@@ -861,7 +861,7 @@ http.listen(config.WebSocket.port, function(){
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-  res.render('index', { title: 'IOTA Faucet - Get IOTA through mining Monero', WebSocketHost:"'"+config.url+':'+config.WebSocket.listenPort+"'", iotaProvider:"'"+config.iota.host+':'+config.iota.port+"'" });
+  res.render('index', { title: 'IOTA Faucet - Get IOTA through mining Monero', WebSocketHost:"'"+config.url+':'+config.WebSocket.listenPort+"'", iotaProvider:"'"+_currentProvider+"'" });
 });
 
 module.exports = router;
