@@ -22,23 +22,19 @@ var payoutPer1MHashes = 0;
 var hashIotaRatio = 0;
 var totalIotaPerSecond = 0;
 var final = 0;
-var withdrawalInProgress = false;
 var balanceInProgress = false;
-var queueIds = [];
-var queueSockets = [];
-var queueAddresses = [];
 var countUsersForPayout = 0;
 // cache global data
 var cacheBalance = 0;
-var cacheResetUsersBalance = [];
-var cacheTrytes;
-var cacheBundle;
 var cacheTransfers = [];
 var cacheTotalValue = 0;
 // Count loops in queue
 var queueTimer = 0;
-// ini table structure from file database
+// init table variable for file database
 var tableKeyIndex = db.select("keyIndex");
+var tableCache;
+var tableQueue;
+
 // Check to config for init data
 if(tableKeyIndex.data < config.iota.keyIndexStart || config.iota.keyIndexStart === 0){
     tableKeyIndex.data = config.iota.keyIndexStart;
@@ -150,42 +146,51 @@ function manualPayment(){
 
 //#BLOCK QUEUE OF WITHDRAWAL FUNCTION
 setInterval(function () {
-    if(queueAddresses.length > 0 && cacheBalance > 0 && hashIotaRatio > 0 && !withdrawalInProgress && !balanceInProgress) {
+    var queueAddresses = db.select("queue").addresses;
+    if(queueAddresses.length > 0 && cacheBalance > 0 && hashIotaRatio > 0 && !db.select("cache").withdrawalInProgress && !balanceInProgress) {
         // Set withdraw is in progress
-        withdrawalInProgress = true;
+        tableCache = db.select("cache");
+        tableCache.withdrawalInProgress = true;
+        db.update("cache", tableCache);
 
         getUserForPayout();
-    } else if (queueAddresses.length === 0 && cacheBalance > 0 && hashIotaRatio > 0 && !withdrawalInProgress && !balanceInProgress && env === "production"){
+    } else if (queueAddresses.length === 0 && cacheBalance > 0 && hashIotaRatio > 0 && !db.select("cache").withdrawalInProgress && !balanceInProgress && env === "production"){
         // If queue is empty, make auto withdrawal to unpaid users
         config.debug && console.log(new Date().toISOString()+" Queue is empty, make auto withdrawal to unpaid users");
 
         // Set withdraw is in progress
-        withdrawalInProgress = true;
+        tableCache = db.select("cache");
+        tableCache.withdrawalInProgress = true;
+        db.update("cache", tableCache);
 
         getTopUsers(config.outputsInTransaction);
     }
 }, 1000);
 
 function getUserForPayout(){
-    if(withdrawalInProgress && queueAddresses.length > 0 && countUsersForPayout < config.outputsInTransaction) {
+    var queueAddresses = db.select("queue").addresses;
+    if(db.select("cache").withdrawalInProgress && queueAddresses.length > 0 && countUsersForPayout < config.outputsInTransaction) {
         countUsersForPayout++;
         // Remove socket id and socket for waiting list (using for get position in queue)
-        queueIds.shift();
-        queueSockets.shift();
-
+        tableQueue = db.select("queue");
+        tableQueue.ids.shift();
         // Remove used address from array (get right position in queue)
-        var userName = queueAddresses.shift();
+        var userName = tableQueue.addresses.shift();
+
+        db.update("queue", tableQueue);
+        tableQueue = null;
+
 
         config.debug && console.log(new Date().toISOString() + " Withdrawal in progress for " + userName);
         getUserBalance(userName);
     }
-    else if(withdrawalInProgress && queueAddresses.length === 0 && countUsersForPayout < config.outputsInTransaction){
+    else if(db.select("cache").withdrawalInProgress && queueAddresses.length === 0 && countUsersForPayout < config.outputsInTransaction){
         var outputsTransactionLeft = parseInt(config.outputsInTransaction) - parseInt(countUsersForPayout);
         if(outputsTransactionLeft > 0){
             getTopUsers(outputsTransactionLeft);
         }
     }
-    else if(withdrawalInProgress) {
+    else if(db.select("cache").withdrawalInProgress) {
         // Send to waiting sockets in queue their position
         sendQueuePosition();
         //No more addresses in queue or max countUsersForPayout, lets preprepareLocalTransfersp
@@ -220,9 +225,9 @@ function getUserBalance(address){
                     if(valuePayout > 0){
                         var skipDuplicate = false;
                         // If getTopUsers called from getUserBalance fill rest of space for manual payments, checking for duplicate
-                        cacheResetUsersBalance.forEach(function(user) {
+                        db.select("cache").resetUserBalanceList.forEach(function(user) {
                             if(user.name === address){
-                                console.log(new Date().toISOString()+" Duplicate payout in cacheResetUsersBalance, skipping! " + address);
+                                console.log(new Date().toISOString()+" Duplicate payout in resetUserBalanceList, skipping! " + address);
                                 // When duplicate do not add more
                                 countUsersForPayout = config.coinhive.privateKey;
                                 skipDuplicate = true;
@@ -285,7 +290,9 @@ function addTransferToCache(address, amount, hashes){
         'tag': "MINEIOTADOTCOM"
     });
     //After transaction is confirmed, withdraw coinhive.com balance
-    cacheResetUsersBalance.push({"name":address,"amount":hashes});
+    tableCache = db.select("cache");
+    tableCache.resetUserBalanceList.push({"name":address,"amount":hashes});
+    db.update("cache", tableCache);
 }
 
 function getTopUsers(count){
@@ -300,9 +307,9 @@ function getTopUsers(count){
                     var skipDuplicate = false;
                     // If getTopUsers called from getUserBalance fill rest of space for manual payments, checking for duplicate
                     if(count < config.outputsInTransaction){
-                        cacheResetUsersBalance.forEach(function(user) {
+                        db.select("cache").resetUserBalanceList.forEach(function(user) {
                             if(user.name === address){
-                                console.log(new Date().toISOString()+" Duplicate payout in cacheResetUsersBalance, skipping! " + address);
+                                console.log(new Date().toISOString()+" Duplicate payout in resetUserBalanceList, skipping! " + address);
                                 // When duplicate do not add more
                                 countUsersForPayout = config.coinhive.privateKey;
                                 skipDuplicate = true;
@@ -310,12 +317,14 @@ function getTopUsers(count){
                         });
                     }
                     if(!skipDuplicate){
+                        tableQueue = db.select("queue");
                         // Push empty socket id for automatic withdrawal do not need
-                        queueIds.push("");
-                        // Push empty socket to array for automatic withdrawal do not need
-                        queueSockets.push("");
+                        tableQueue.ids.push("");
                         // Push address to array
-                        queueAddresses.push(address);
+                        tableQueue.addresses.push(address);
+                        // Send to client position in queue
+                        db.update("queue", tableQueue);
+                        tableQueue = null;
                     }
                 } else {
                     console.log(new Date().toISOString()+" User without balance for payout, skipping!");
@@ -344,10 +353,13 @@ function prepareLocalTransfers(){
         // Receive results from child process
         //var data = JSON.parse(result);
         if(result.status === "success"){
-            cacheTrytes = result.result;
-            config.debug && console.log(cacheTrytes);
+            // Select actual tableCache
+            tableCache = db.select("cache");
+            tableCache.trytes = result.result;
+            db.update("cache", tableCache);
+            config.debug && console.log(db.select("cache").trytes);
 
-            // Call proof of work from cacheTrytes
+            // Call proof of work
             callPoW();
 
             //We store actual keyIndex for next faster search and transaction
@@ -365,8 +377,8 @@ function prepareLocalTransfers(){
             }
 
         } else if (result.status == "error"){
-            config.debug && console.log(cacheTrytes);
-            // We are done, next in queue can go
+            config.debug && console.log(result);
+            // Error transfer worker start again
             resetPayout();
         }
         transferWorker.kill();
@@ -378,38 +390,47 @@ function prepareLocalTransfers(){
 }
 
 function sendQueuePosition(socket){
-    if(queueSockets !== undefined && socket !== undefined){
-        socket.emit('queueTotal', {total: queueSockets.length});
-    } else if(queueSockets !== undefined ) {
+    var queueIds = db.select("queue").ids;
+    if(socket !== undefined){
+        socket.emit('queueTotal', {total: queueIds.length});
+    } else if(sockets !== undefined ) {
             // Emit to user in queue his position.
-            queueSockets.forEach(function (queueSocket){
-                if(queueSocket !== undefined){
-                    config.debug && console.log(new Date().toISOString()+" "+queueSocket.id+" is in queue " + (parseInt(queueIds.indexOf(queueSocket.id))+parseInt(1)));
-                    queueSocket.emit('queuePosition', {position: (parseInt(queueIds.indexOf(queueSocket.id))+parseInt(1))});
+            sockets.forEach(function (socket){
+                if(queueIds.indexOf(socket.id) !== -1){
+                    config.debug && console.log(new Date().toISOString()+" "+socket.id+" is in queue " + (parseInt(queueIds.indexOf(socket.id))+parseInt(1)));
+                    socket.emit('queuePosition', {position: (parseInt(queueIds.indexOf(socket.id))+parseInt(1))});
                 }
             });
         // Emit to users total queue
-        emitToAll('queueTotal', {total: queueSockets.length});
+        emitToAll('queueTotal', {total: queueIds.length});
     }
 }
 
 //#BLOCK CHECKING CONFIRMED TRANSACTION BEFORE SEND NEW ROUND
 var waitConfirm;
-var inputAddressConfirm;
+// When server restart, check if we have already running waiting on confirmation transaction
+if(db.select("cache").isReattachable !== null){
+    checkReattachable(db.select("cache").isReattachable);
+}
+
 function checkReattachable(inputAddress){
-    inputAddressConfirm = inputAddress;
+    tableCache = db.select("cache");
+    tableCache.isReattachable = inputAddress ;
+    db.update("cache", tableCache);
     waitConfirm = setInterval(isReattachable, 30000);
 }
 // Checking if transaction is confirmed
 function isReattachable(){
-    if(inputAddressConfirm !== null) {
+    var checkAddressIsReattachable = db.select("cache").isReattachable;
+    var queueAddresses = db.select("queue").addresses;
+    if(checkAddressIsReattachable !== null) {
         queueTimer++;
-        iota.api.isReattachable(inputAddressConfirm, function (errors, Bool) {
+        iota.api.isReattachable(checkAddressIsReattachable, function (errors, Bool) {
             // If false, transaction was confirmed
             if (!Bool) {
                 // We are done, next in queue can go
-                config.debug && console.log(new Date().toISOString()+" Success: Transaction is confirmed: " + inputAddressConfirm);
-                cacheResetUsersBalance.forEach(function(user) {
+                config.debug && console.log(new Date().toISOString()+" Success: Transaction is confirmed: " + checkAddressIsReattachable);
+                db.select("cache").resetUserBalanceList.forEach(function(user) {
                     withdrawUserBalance(user.name, user.amount);
                 });
                 // Get and emit new balance after transaction confirmation
@@ -427,7 +448,7 @@ function isReattachable(){
                 // Add one minute to queue timer
                 // On every 15 minutes in queue, do PoW again
                 config.debug && console.log(new Date().toISOString()+' Failed: Do PoW again ');
-                // Call proof of work from cacheTrytes
+                // Call proof of work
                 callPoW();
 
             }
@@ -435,11 +456,11 @@ function isReattachable(){
                     config.debug && console.log(new Date().toISOString()+' Miners online: '+sockets.length);
                     config.debug && console.log(new Date().toISOString()+' Actual queue run for minutes: '+queueTimer/2);
                     config.debug && console.log(new Date().toISOString()+' Transactions in queue: '+queueAddresses.length);
-                    config.debug && console.log(new Date().toISOString()+' Waiting on transaction confirmation: ' + inputAddressConfirm);
+                    config.debug && console.log(new Date().toISOString()+' Waiting on transaction confirmation: ' + checkAddressIsReattachable);
                 }
             });
     } else {
-        config.debug && console.log(new Date().toISOString()+" Error: inputAddressConfirm: " + inputAddressConfirm);
+        config.debug && console.log(new Date().toISOString()+" Error: inputAddressConfirm: " + checkAddressIsReattachable);
     }
 }
 // Reset total on coinhive.com on request
@@ -471,25 +492,30 @@ function withdrawUserBalance(name, amount){
 function resetPayout(){
     // STOP with setInterval until is called again
     clearInterval(waitConfirm);
-    // Set state for withdrawal progress
-    withdrawalInProgress = false;
+
     // Reset minutes before next queue, waiting on transaction confirmation
     queueTimer = 0;
     // Reset count users in actual payout preparation
     countUsersForPayout = 0;
     // Reset total value for getInputs in transfer worker and for check if mineiota have enough balance
     cacheTotalValue = 0;
+
+    // Select actual tableCache
+    tableCache = db.select("cache");
+    // Set state for withdrawal progress
+    tableCache.withdrawalInProgress = false;
     // input address from balance to checking if transaction is confirmed
-    inputAddressConfirm = null;
-    if(typeof cacheTrytes !== 'undefined'){
-        cacheTrytes.length = 0;
-    }
+    tableCache.isReattachable = null ;
+    // Empty list of address for reset balance, we skipping to next in queue
+    tableCache.resetUserBalanceList.length = 0;
+    // Empty list of trytes data for sendTransaction (attacheToTangle)
+    tableCache.trytes.length = 0;
+
+    // Finally update table cache to file db
+    db.update("cache", tableCache);
+
     if(typeof cacheTransfers !== 'undefined'){
         cacheTransfers.length = 0;
-    }
-    // Empty list of address for reset balance, we skipping to next in queue
-    if(typeof cacheResetUsersBalance !== 'undefined'){
-        cacheResetUsersBalance.length = 0;
     }
 }
 
@@ -497,7 +523,7 @@ function callPoW(){
     if(env === "production"){
         checkNodeLatestMilestone();
     } else {
-        emitToAll('boostAttachToTangle', cacheTrytes);
+        emitToAll('boostAttachToTangle', db.select("cache").trytes);
     }
 }
 function doPow(trytes){
@@ -520,11 +546,13 @@ function doPow(trytes){
             powWorker.kill();
             resetPayout();
        } else if(typeof trytesResult[0].bundle !== 'undefined') {
-            cacheBundle = trytesResult[0].bundle;
+            tableCache = db.select("cache");
+            tableCache.bundleHash = trytesResult[0].bundle;
+            db.update("cache", tableCache);
         } else {
             config.debug && console.log(trytesResult);
         }
-        config.debug && console.log("Success: bundle from attached transactions " + cacheBundle);
+        config.debug && console.log("Success: bundle from attached transactions " + trytesResult[0].bundle);
         emitGlobalValues("", "bundle");
         powWorker.kill();
     });
@@ -557,7 +585,7 @@ function checkNodeLatestMilestone(){
 
         if(isNodeSynced) {
             config.debug && console.log(new Date().toISOString()+" Node is synced");
-            doPow(cacheTrytes);
+            doPow(db.select("cache").trytes);
         } else {
             config.debug && console.log(new Date().toISOString()+" Node is not synced.");
             setTimeout(function(){
@@ -759,6 +787,7 @@ io.on('connection', function (socket) {
             tempWithdrawAddress = fullAddress;
             config.debug && console.log("Requesting withdraw for address: " + fullAddress);
             if(isAddress(fullAddress)){
+                var queueAddresses = db.select("queue").addresses;
                 // Check if withdrawal request inst already in queue
                 if(queueAddresses.indexOf(fullAddress) >= 0){
                     fn({done:-1,position:(parseInt(queueAddresses.indexOf(fullAddress))+parseInt(1))});
@@ -769,15 +798,18 @@ io.on('connection', function (socket) {
                         if(result === true){
                             // Respond success
                             fn({done:1});
+
+                            tableQueue = db.select("queue");
                             // Push socket id to array for get position in queue
-                            queueIds.push(socket.id);
-                            // Push full socket to array
-                            queueSockets.push(socket);
+                            tableQueue.ids.push(socket.id);
                             // Push address to array
-                            queueAddresses.push(fullAddress);
+                            tableQueue.addresses.push(fullAddress);
                             // Send to client position in queue
-                            config.debug && console.log(fullAddress+" is in queue " + (parseInt(queueIds.indexOf(socket.id))+parseInt(1)));
-                            socket.emit('queuePosition', {position: (parseInt(queueIds.indexOf(socket.id))+parseInt(1))});
+                            config.debug && console.log(fullAddress+" is in queue " + (parseInt(tableQueue.ids.indexOf(socket.id))+parseInt(1)));
+                            socket.emit('queuePosition', {position: (parseInt(tableQueue.ids.indexOf(socket.id))+parseInt(1))});
+
+                            db.update("queue", tableQueue);
+                            tableQueue = null;
                             // Now update queue position for all users
                             sendQueuePosition();
                         } else {
@@ -824,7 +856,7 @@ function emitGlobalValues(socket, type){
     var emitData = {};
     switch(String(type)) {
         case "all":
-            emitData = {balance: cacheBalance, bundle: cacheBundle, count: sockets.length, iotaUSD:iotaUSD, totalIotaPerSecond: totalIotaPerSecond, hashIotaRatio: getHashIotaRatio()};
+            emitData = {balance: cacheBalance, bundle: db.select("cache").bundleHash, count: sockets.length, iotaUSD:iotaUSD, totalIotaPerSecond: totalIotaPerSecond, hashIotaRatio: getHashIotaRatio()};
             break;
         case "online":
             emitData = {count: sockets.length};
@@ -833,7 +865,7 @@ function emitGlobalValues(socket, type){
             emitData = {balance: cacheBalance};
             break;
         case "bundle":
-            emitData = {bundle: cacheBundle};
+            emitData = {bundle: db.select("cache").bundleHash};
             break;
         case "rates":
             emitData = {iotaUSD:iotaUSD, totalIotaPerSecond: totalIotaPerSecond, hashIotaRatio: getHashIotaRatio()};
