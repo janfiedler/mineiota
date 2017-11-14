@@ -245,6 +245,7 @@ $( document ).ready(function() {
     $("#withdraw").click(function () {
         iotaAddress = $("#iotaAddress").val();
         if(iotaAddress != ''){
+            $(this).hide();
             const tangleExplorerAddressLinks = tangleAddressExplorers.map(function(tangleExplorer) {
                     return "<a href=\'"+tangleExplorer.urlAddress+iotaAddress+"' target='_blank'>"+tangleExplorer.name+"</a>";
                 }).join(' – ');
@@ -252,12 +253,16 @@ $( document ).ready(function() {
             socket.emit('withdraw', {address: iotaAddress}, function (data) {
                 //console.log(data);
                 if (data.done == 1) {
+                    $('#withdraw').show();
                     $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Requesting withdrawal was confirmed.</div>');
                 } else if(data.done === -1) {
+                    $('#withdraw').show();
                     $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;You are already in withdrawal queue. Position: '+ data.position +'</div>');
                 } else if(data.done === -2) {
+                    $('#withdraw').show();
                     $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;You are already clicked on withdrawal</div>');
                 } else {
+                    $('#withdraw').show();
                     $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Address is not attached to tangle. or bad address format!</div>');
                     showLinkTutorial();
                 }
