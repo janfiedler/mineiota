@@ -40,11 +40,10 @@ var queueTimer = 0;
 // ini table structure from file database
 var tableKeyIndex = db.select("keyIndex");
 // Check to config for init data
-if(tableKeyIndex.data < config.iota.keyIndexStart){
+if(tableKeyIndex.data < config.iota.keyIndexStart || config.iota.keyIndexStart === 0){
     tableKeyIndex.data = config.iota.keyIndexStart;
     db.update("keyIndex", tableKeyIndex);
 }
-
 // List of https providers
 const httpsProviders = [
     "https://iota.onlinedata.cloud:14443"
