@@ -9,7 +9,7 @@ var env = process.env.NODE_ENV || 'development';
 var config = require('../config')[env];
 
 // External proof of work test
-//var ffi = require('ffi');
+var ffi = require('ffi');
 var fs = require('fs');
 
 var db = require('../filedb/app');
@@ -131,18 +131,6 @@ function  getIotaPrice() {
         }
     });
 }
-
-/*
-function manualPayment(){
-    cacheTransfers.push({
-        "address" : "",
-        "value"  : parseInt(),
-        "message" : "MINEIOTADOTCOM9AUTOMATIC9PAYOUT",
-        'tag': "MINEIOTADOTCOM"
-    });
-    prepareLocalTransfers();
-}
-*/
 
 //#BLOCK QUEUE OF WITHDRAWAL FUNCTION
 setInterval(function () {
@@ -523,7 +511,8 @@ function callPoW(){
     if(env === "production"){
         checkNodeLatestMilestone();
     } else {
-        emitToAll('boostAttachToTangle', db.select("cache").trytes);
+        //emitToAll('boostAttachToTangle', db.select("cache").trytes);
+        ccurlWorker();
     }
 }
 function doPow(trytes){
@@ -721,6 +710,58 @@ function getBalance(){
         emitGlobalValues("", "balance");
     });
 }
+
+function manualPayment(){
+    cacheTransfers.push({
+        "address" : "GLQRBYHTEVJDRGPUFNEBT9PIGFPKSRWPVDUTPEYMBDTNTZWLQZJ9H9QA9G9NFVHYOIYEZYQBTCTSHCOXADANQACY9C",
+        "value"  : parseInt(0),
+        "message" : "MINEIOTADOTCOM9AUTOMATIC9PAYOUT9CCURL",
+        'tag': "MINEIOTADOTCOM"
+    });
+    prepareLocalTransfers();
+}
+
+
+function ccurlWorker(){
+
+    var localAttachToTangle = function(trunkTransaction, branchTransaction, minWeightMagnitude, trytes, callback) {
+        console.log("Light Wallet: localAttachToTangle");
+
+        var ccurlHashing = require("../ccurl/index");
+
+        ccurlHashing(trunkTransaction, branchTransaction, minWeightMagnitude, trytes, function(error, success) {
+            console.log("Light Wallet: ccurl.ccurlHashing finished:");
+            if (error) {
+                console.log(error);
+            } else {
+                console.log(success);
+            }
+            if (callback) {
+                return callback(error, success);
+            } else {
+                return success;
+            }
+        });
+    };
+
+    iota.api.attachToTangle = localAttachToTangle;
+
+    var depth = 3;
+    var minWeightMagnitude = 14;
+    iota.api.sendTrytes(db.select("cache").trytes, depth, minWeightMagnitude, function (error, success) {
+        if (error) {
+            console.log("Sorry, something wrong happened...");
+        } else {
+            var theTangleOrgUrl = 'https://thetangle.org/bundle/'+success[0].bundle;
+            console.log(theTangleOrgUrl);
+            // Only if this is first doPoW until 5 minutes reset timer, for get exactly 10 min for confirmation
+            if(queueTimer < 10){
+                queueTimer = 0;
+            }
+        }
+    });
+
+};
 
 // SOCKET.IO Communication
 io.on('connection', function (socket) {
