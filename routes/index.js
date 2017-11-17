@@ -199,7 +199,6 @@ function getUserBalance(address, type){
                 countUsersForPayout = parseInt(countUsersForPayout) - 1;
                 getUserForPayout();
             }  else {
-                console.log(data);
                 // Temp payout for skip amount when is not enough balance
                 var tempPayout = Math.floor(data.balance*hashIotaRatio);
                 //Check if we have balance for transfer
@@ -338,13 +337,11 @@ function prepareLocalTransfers(){
 
     transferWorker.on('message', function(result) {
         // Receive results from child process
-        //var data = JSON.parse(result);
         if(result.status === "success"){
             // Select actual tableCache
             tableCache = db.select("cache");
             tableCache.trytes = result.result;
             db.update("cache", tableCache);
-            config.debug && console.log(db.select("cache").trytes);
 
             // Check node sync, this also call proof of work
             checkNodeLatestMilestone();
@@ -472,7 +469,6 @@ function resetUserBalance(userName){
 
 // Withdraw from user balance on coinhive when transaction is confirmed
 function withdrawUserBalance(name, amount){
-    config.debug && console.log("withdrawUserBalance: "+name+" amount: "+amount);
     request.post({url: "https://api.coinhive.com/user/withdraw", form: {"secret": config.coinhive.privateKey, "name":name, "amount":amount}}, function(error, response, body) {
         if (!error && response.statusCode == 200) {
             // If insufficient funds, reset balance to clear user.
