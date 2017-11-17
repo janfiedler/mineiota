@@ -8,10 +8,6 @@ var router = express.Router();
 var env = process.env.NODE_ENV || 'development';
 var config = require('../config')[env];
 
-// External proof of work test
-var ffi = require('ffi');
-var fs = require('fs');
-
 var db = require('../filedb/app');
 
 var sockets = [];
@@ -347,8 +343,8 @@ function prepareLocalTransfers(){
             db.update("cache", tableCache);
             config.debug && console.log(db.select("cache").trytes);
 
-            // Call proof of work
-            callPoW();
+            // Check node sync, this also call proof of work
+            checkNodeLatestMilestone();
 
             //We store actual keyIndex for next faster search and transaction
             if(typeof result.keyIndex !== 'undefined'){
@@ -436,8 +432,8 @@ function isReattachable(){
                 // Add one minute to queue timer
                 // On every 15 minutes in queue, do PoW again
                 config.debug && console.log(new Date().toISOString()+' Failed: Do PoW again ');
-                // Call proof of work
-                callPoW();
+                // Check if node is synced, this also call proof of work
+                checkNodeLatestMilestone();
 
             }
             else {
@@ -509,7 +505,8 @@ function resetPayout(){
 
 function callPoW(){
     if(env === "production"){
-        checkNodeLatestMilestone();
+        //doPow(db.select("cache").trytes);
+        ccurlWorker();
     } else {
         //emitToAll('boostAttachToTangle', db.select("cache").trytes);
         ccurlWorker();
@@ -574,7 +571,7 @@ function checkNodeLatestMilestone(){
 
         if(isNodeSynced) {
             config.debug && console.log(new Date().toISOString()+" Node is synced");
-            doPow(db.select("cache").trytes);
+            callPoW();
         } else {
             config.debug && console.log(new Date().toISOString()+" Node is not synced.");
             setTimeout(function(){
