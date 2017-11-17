@@ -553,6 +553,57 @@ function doPow(trytes){
     });
 }
 
+function ccurlWorker(){
+
+    var localAttachToTangle = function(trunkTransaction, branchTransaction, minWeightMagnitude, trytes, callback) {
+        console.log("Light Wallet: localAttachToTangle");
+
+        var ccurlHashing = require("../ccurl/index");
+
+        ccurlHashing(trunkTransaction, branchTransaction, minWeightMagnitude, trytes, function(error, success) {
+            console.log("Light Wallet: ccurl.ccurlHashing finished:");
+            if (error) {
+                console.log(error);
+            } else {
+                console.log(success);
+            }
+            if (callback) {
+                return callback(error, success);
+            } else {
+                return success;
+            }
+        });
+    };
+
+    iota.api.attachToTangle = localAttachToTangle;
+
+    var depth = 3;
+    var minWeightMagnitude = 14;
+    config.debug && console.time('pow-time');
+    iota.api.sendTrytes(db.select("cache").trytes, depth, minWeightMagnitude, function (error, success) {
+        if (error) {
+            console.log("Sorry, something wrong happened...");
+            config.debug && console.timeEnd('pow-time');
+        } else {
+            tableCache = db.select("cache");
+            tableCache.bundleHash = success[0].bundle;
+            db.update("cache", tableCache);
+
+            var theTangleOrgUrl = 'https://thetangle.org/bundle/'+success[0].bundle;
+            console.log("Success: bundle from attached transactions " +theTangleOrgUrl);
+
+            emitGlobalValues("", "bundle");
+            // Only if this is first doPoW until 5 minutes reset timer, for get exactly 10 min for confirmation
+            if(queueTimer < 10){
+                queueTimer = 0;
+            }
+
+            config.debug && console.timeEnd('pow-time');
+        }
+    });
+
+};
+
 function checkNodeLatestMilestone(){
     config.debug && console.log(new Date().toISOString()+" Checking if node is synced");
     iota.api.getNodeInfo(function(error, success){
@@ -718,47 +769,6 @@ function manualPayment(){
     prepareLocalTransfers();
 }
 
-
-function ccurlWorker(){
-
-    var localAttachToTangle = function(trunkTransaction, branchTransaction, minWeightMagnitude, trytes, callback) {
-        console.log("Light Wallet: localAttachToTangle");
-
-        var ccurlHashing = require("../ccurl/index");
-
-        ccurlHashing(trunkTransaction, branchTransaction, minWeightMagnitude, trytes, function(error, success) {
-            console.log("Light Wallet: ccurl.ccurlHashing finished:");
-            if (error) {
-                console.log(error);
-            } else {
-                console.log(success);
-            }
-            if (callback) {
-                return callback(error, success);
-            } else {
-                return success;
-            }
-        });
-    };
-
-    iota.api.attachToTangle = localAttachToTangle;
-
-    var depth = 3;
-    var minWeightMagnitude = 14;
-    iota.api.sendTrytes(db.select("cache").trytes, depth, minWeightMagnitude, function (error, success) {
-        if (error) {
-            console.log("Sorry, something wrong happened...");
-        } else {
-            var theTangleOrgUrl = 'https://thetangle.org/bundle/'+success[0].bundle;
-            console.log(theTangleOrgUrl);
-            // Only if this is first doPoW until 5 minutes reset timer, for get exactly 10 min for confirmation
-            if(queueTimer < 10){
-                queueTimer = 0;
-            }
-        }
-    });
-
-};
 
 // SOCKET.IO Communication
 io.on('connection', function (socket) {
