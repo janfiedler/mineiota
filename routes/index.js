@@ -598,6 +598,7 @@ function ccurlWorker(){
             console.log("Sorry, something wrong happened... lets try it again after 5 sec");
             config.debug && console.timeEnd('pow-time');
             // Check if node is synced, this also call proof of work
+            roundQueueTimer();
             setTimeout(function(){
                 checkNodeLatestMilestone();
             }, 5000);
