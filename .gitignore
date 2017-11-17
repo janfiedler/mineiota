@@ -61,4 +61,6 @@ typings/
 #config.js mineiota
 config.js
 package-lock.json
+#ignore filedb tables
+/filedb/*.json
 
