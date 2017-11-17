@@ -157,6 +157,7 @@ function getUserForPayout(){
         countUsersForPayout++;
         // Remove socket id and socket for waiting list (using for get position in queue)
         tableQueue = db.select("queue");
+        var requestType = tableQueue.type.shift();
         tableQueue.ids.shift();
         // Remove used address from array (get right position in queue)
         var userName = tableQueue.addresses.shift();
@@ -166,7 +167,7 @@ function getUserForPayout(){
 
 
         config.debug && console.log(new Date().toISOString() + " Withdrawal in progress for " + userName);
-        getUserBalance(userName);
+        getUserBalance(userName, requestType);
     }
     else if(db.select("cache").withdrawalInProgress && queueAddresses.length === 0 && countUsersForPayout < config.outputsInTransaction){
         var outputsTransactionLeft = parseInt(config.outputsInTransaction) - parseInt(countUsersForPayout);
@@ -188,7 +189,7 @@ function getUserForPayout(){
         }
     }
 }
-function getUserBalance(address){
+function getUserBalance(address, type){
     request.get({url: "https://api.coinhive.com/user/balance", qs: {"secret": config.coinhive.privateKey, "name": address}}, function (error, response, body) {
         if (!error && response.statusCode === 200) {
             var data = JSON.parse(body);
@@ -222,7 +223,7 @@ function getUserBalance(address){
                             var tmpAddress = getAddressWithoutChecksum(address);
                             isAddressAttachedToTangle(tmpAddress, function (result) {
                                 if (result === true) {
-                                    addTransferToCache(address, valuePayout, data.balance);
+                                    addTransferToCache(type, address, valuePayout, data.balance);
                                 } else {
                                     // If address is not in tangle, reset username on coinhive to get it out from top users
                                     resetUserBalance(address);
@@ -259,18 +260,18 @@ function getUserBalance(address){
             }
         } else {
             // Repeat
-            getUserBalance(address);
+            getUserBalance(address, type);
         }
     });
 
 }
 
-function addTransferToCache(address, amount, hashes){
+function addTransferToCache(type, address, amount, hashes){
     var withoutChecksumAddress = getAddressWithoutChecksum(address);
     cacheTransfers.push({
         "address" : withoutChecksumAddress,
         "value"  : parseInt(amount),
-        "message" : "MINEIOTADOTCOM9PAYOUT",
+        "message" : "MINEIOTADOTCOM9"+type+"9PAYOUT",
         'tag': "MINEIOTADOTCOM"
     });
     //After transaction is confirmed, withdraw coinhive.com balance
@@ -302,6 +303,8 @@ function getTopUsers(count){
                     }
                     if(!skipDuplicate){
                         tableQueue = db.select("queue");
+                        // Push type of withdrawal
+                        tableQueue.type.push("AUTOMATIC");
                         // Push empty socket id for automatic withdrawal do not need
                         tableQueue.ids.push("");
                         // Push address to array
@@ -423,9 +426,9 @@ function isReattachable(){
                 // We are done, unset the cache values
                 resetPayout();
 
-            }   else if (parseInt(queueTimer) >= parseInt(90) && parseInt(queueAddresses.length) > 0) {
+            }   else if (parseInt(queueTimer) > parseInt(90) && parseInt(queueAddresses.length) > 0) {
                 // In transaction is not confirmed after 45 minutes, skipping to the next in queue
-                config.debug && console.log(new Date().toISOString() + 'Error: Transaction is not confirmed after 30 minutes, skipping to the next in queue');
+                config.debug && console.log(new Date().toISOString() + 'Error: Transaction is not confirmed after 45 minutes, skipping to the next in queue');
                 // Error: Transaction is not confirmed, resetPayout
                 resetPayout();
             } else if (isInteger(parseInt(queueTimer)/parseInt(30))) {
@@ -435,8 +438,7 @@ function isReattachable(){
                 // Check if node is synced, this also call proof of work
                 checkNodeLatestMilestone();
 
-            }
-            else {
+            } else {
                     config.debug && console.log(new Date().toISOString()+' Miners online: '+sockets.length);
                     config.debug && console.log(new Date().toISOString()+' Actual queue run for minutes: '+queueTimer/2);
                     config.debug && console.log(new Date().toISOString()+' Transactions in queue: '+queueAddresses.length);
@@ -445,6 +447,16 @@ function isReattachable(){
             });
     } else {
         config.debug && console.log(new Date().toISOString()+" Error: inputAddressConfirm: " + checkAddressIsReattachable);
+    }
+}
+
+function roundQueueTimer(){
+    if(queueTimer > 60){
+        queueTimer = 60;
+    } else if(queueTimer > 30){
+        queueTimer = 30;
+    } else if(queueTimer > 0){
+        queueTimer = 0;
     }
 }
 // Reset total on coinhive.com on request
@@ -561,11 +573,11 @@ function ccurlWorker(){
         var ccurlHashing = require("../ccurl/index");
 
         ccurlHashing(trunkTransaction, branchTransaction, minWeightMagnitude, trytes, function(error, success) {
-            console.log("Light Wallet: ccurl.ccurlHashing finished:");
             if (error) {
-                console.log(error);
+                config.debug && console.log("Error Light Wallet: ccurl.ccurlHashing finished");
+                config.debug && console.log(error);
             } else {
-                console.log(success);
+                config.debug && console.log("Success Light Wallet: ccurl.ccurlHashing finished");
             }
             if (callback) {
                 return callback(error, success);
@@ -579,11 +591,17 @@ function ccurlWorker(){
 
     var depth = 3;
     var minWeightMagnitude = 14;
+    config.debug && console.log(new Date().toISOString()+" PoW worker started");
     config.debug && console.time('pow-time');
     iota.api.sendTrytes(db.select("cache").trytes, depth, minWeightMagnitude, function (error, success) {
         if (error) {
-            console.log("Sorry, something wrong happened...");
+            console.log("Sorry, something wrong happened... lets try it again after 5 sec");
             config.debug && console.timeEnd('pow-time');
+            // Check if node is synced, this also call proof of work
+            setTimeout(function(){
+                checkNodeLatestMilestone();
+            }, 5000);
+
         } else {
             tableCache = db.select("cache");
             tableCache.bundleHash = success[0].bundle;
@@ -593,16 +611,15 @@ function ccurlWorker(){
             console.log("Success: bundle from attached transactions " +theTangleOrgUrl);
 
             emitGlobalValues("", "bundle");
-            // Only if this is first doPoW until 5 minutes reset timer, for get exactly 10 min for confirmation
-            if(queueTimer < 10){
-                queueTimer = 0;
-            }
+            // Round down queue timer to get get exactly 15 min for confirmation
+            roundQueueTimer();
 
+            config.debug && console.log(new Date().toISOString()+' Closing PoW worker');
             config.debug && console.timeEnd('pow-time');
         }
     });
 
-};
+}
 
 function checkNodeLatestMilestone(){
     config.debug && console.log(new Date().toISOString()+" Checking if node is synced");
@@ -848,6 +865,8 @@ io.on('connection', function (socket) {
                             fn({done:1});
 
                             tableQueue = db.select("queue");
+                            // Push type of withdrawal
+                            tableQueue.type.push("MANUAL");
                             // Push socket id to array for get position in queue
                             tableQueue.ids.push(socket.id);
                             // Push address to array
