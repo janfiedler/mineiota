@@ -148,12 +148,12 @@ $( document ).ready(function() {
             $('#mySpinner').show();
             socket.emit('login', {address:iotaAddress}, function (data) {
                 if (data.done === -1) {
+                    showAddresAttachTutorial();
                     $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Failed! Your address is not attached and confirmed to tangle!</div>');
                     // Hide spinner, user is accepted
                     $('#mySpinner').hide();
                     $('#setAddress').show();
                     $('#iotaAddress').val('');
-                    showLinkTutorial();
                 }else if(data.done === 1){
                     // Hide button for setting address
                     $('#setAddress').hide();
@@ -263,8 +263,8 @@ $( document ).ready(function() {
                     $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;You are already clicked on withdrawal</div>');
                 } else {
                     $('#withdraw').show();
+                    showAddresAttachTutorial();
                     $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Address is not attached to tangle. or bad address format!</div>');
-                    showLinkTutorial();
                 }
             });
         } else {
@@ -275,8 +275,9 @@ $( document ).ready(function() {
         socket.emit('boostRequest', '');
     });
 
-    function showLinkTutorial(){
-        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Maybe will help you <a href="https://medium.com/@anhdres/how-to-mine-iotas-while-you-do-normal-stuff-with-your-computer-cfa98c47dbcf" target="_blank">tutorial</a> ;)</div>');
+    function showAddresAttachTutorial(){
+        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;<img src="/images/how_attach_address.png"></div>');
+        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Be sure, you did those steps: </div>');
     }
 
     function emitPayout(bundle){
