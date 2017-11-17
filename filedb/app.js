@@ -18,7 +18,7 @@ module.exports = {
                     return JSON.parse(tableDefault);
                     break;
                 case "queue":
-                    tableDefault = '{"type":[],ids":[],"addresses":[]}';
+                    tableDefault = '{"type":[],"ids":[],"addresses":[]}';
                     this.update(table, JSON.parse(tableDefault));
                     return JSON.parse(tableDefault);
                     break;
