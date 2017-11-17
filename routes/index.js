@@ -595,7 +595,8 @@ function ccurlWorker(){
     config.debug && console.time('pow-time');
     iota.api.sendTrytes(db.select("cache").trytes, depth, minWeightMagnitude, function (error, success) {
         if (error) {
-            console.log("Sorry, something wrong happened... lets try it again after 5 sec");
+            console.error("Sorry, something wrong happened... lets try it again after 5 sec");
+            config.debug && console.error(error);
             config.debug && console.timeEnd('pow-time');
             // Check if node is synced, this also call proof of work
             roundQueueTimer();
