@@ -416,13 +416,11 @@ function isReattachable(){
                 db.select("cache").resetUserBalanceList.forEach(function(user) {
                     withdrawUserBalance(user.name, user.amount);
                 });
-                // Get and emit new balance after transaction confirmation
-                getBalance();
-
                 // We are done, unset the cache values
                 resetPayout();
-
-            }   else if (parseInt(queueTimer) > parseInt(90) && parseInt(queueAddresses.length) > 0) {
+                // Get and emit new balance after transaction confirmation
+                getBalance();
+            }  else if (parseInt(queueTimer) > parseInt(90) && parseInt(queueAddresses.length) > 0) {
                 // In transaction is not confirmed after 45 minutes, skipping to the next in queue
                 config.debug && console.log(new Date().toISOString() + 'Error: Transaction is not confirmed after 45 minutes, skipping to the next in queue');
                 // Error: Transaction is not confirmed, resetPayout
