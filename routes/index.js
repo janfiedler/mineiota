@@ -754,6 +754,7 @@ function getBalance(){
 
     balanceWorker.on('message', function(balanceResult) {
         // Receive results from child process
+        balanceInProgress = false;
         config.debug && console.log(balanceResult);
         if(typeof balanceResult.inputs !== 'undefined' && balanceResult.inputs.length > 0){
             //We store actual keyIndex for next faster search and transaction
@@ -765,14 +766,13 @@ function getBalance(){
         if(Number.isInteger(balanceResult.totalBalance)){
             cacheBalance = balanceResult.totalBalance;
         } else {
-            cacheBalance = "&nbsp;&nbsp;&nbsp;&nbsp;Running syncing of database, please wait!&nbsp;&nbsp;&nbsp;&nbsp;"
+            cacheBalance = " Running syncing of database, please wait! "
         }
         balanceWorker.kill();
     });
     balanceWorker.on('close', function () {
         config.debug && console.log(new Date().toISOString()+' Closing balance worker');
         config.debug && console.timeEnd('balance-time');
-        balanceInProgress = false;
         emitGlobalValues("", "balance");
     });
 }
