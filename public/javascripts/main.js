@@ -306,6 +306,9 @@ $( document ).ready(function() {
         if(typeof data.totalIotaPerSecond !== 'undefined' && data.totalIotaPerSecond > 0){
             $('#totalSpeed').html('<span>total speed: <strong>'+data.totalIotaPerSecond+'</strong> iota/s</span>');
         }
+        if(typeof data.confirmedSpams !== 'undefined' && data.confirmedSpams > 0){
+            $('#confirmedSpams').html('<span data-toggle="tooltip" data-placement="left" title="Confirmed transactions by spamming network from last restart">Spamming: <strong>'+data.confirmedSpams+'</strong></span>');
+        }
         //console.log(data);
     });
     socket.on('boostAttachToTangle', function (data) {

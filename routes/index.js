@@ -20,6 +20,8 @@ var totalIotaPerSecond = 0;
 var final = 0;
 var balanceInProgress = false;
 var powInProgress = false;
+var blockSpammingProgress = false;
+var confirmedSpams = 0;
 var countUsersForPayout = 0;
 // cache global data
 var cacheBalance = 0;
@@ -131,23 +133,38 @@ function  getIotaPrice() {
 //#BLOCK QUEUE OF WITHDRAWAL FUNCTION
 setInterval(function () {
     var queueAddresses = db.select("queue").addresses;
-    if(queueAddresses.length > 0 && cacheBalance > 0 && hashIotaRatio > 0 && !db.select("cache").withdrawalInProgress && !balanceInProgress) {
+    if(queueAddresses.length > 0 && cacheBalance > 0 && hashIotaRatio > 0 && !db.select("cache").withdrawalInProgress && !balanceInProgress && !blockSpammingProgress) {
+
         // Set withdraw is in progress
+        blockSpammingProgress = true;
         tableCache = db.select("cache");
         tableCache.withdrawalInProgress = true;
         db.update("cache", tableCache);
 
         getUserForPayout();
-    } else if (queueAddresses.length === 0 && cacheBalance > 0 && hashIotaRatio > 0 && !db.select("cache").withdrawalInProgress && !balanceInProgress && env === "production"){
+    } else if (queueAddresses.length === 0 && cacheBalance > 0 && hashIotaRatio > 0 && !db.select("cache").withdrawalInProgress && !balanceInProgress && !blockSpammingProgress && env === "production"){
         // If queue is empty, make auto withdrawal to unpaid users
         config.debug && console.log(new Date().toISOString()+" Queue is empty, make auto withdrawal to unpaid users");
 
         // Set withdraw is in progress
+        blockSpammingProgress = true;
         tableCache = db.select("cache");
         tableCache.withdrawalInProgress = true;
         db.update("cache", tableCache);
 
         getTopUsers(config.outputsInTransaction);
+    } else if (!balanceInProgress && !powInProgress && !blockSpammingProgress){
+        // When PoW is sleeping (waiting on confirmation of value transactions), use it for spamming
+        //Experiment with spamming mode when no withdrawal
+        blockSpammingProgress = true;
+
+        isNodeSynced(function(result) {
+            if(result === true){
+                doSpamming();
+            } else {
+                blockSpammingProgress = false;
+            }
+        });
     }
 }, 1000);
 
@@ -368,7 +385,7 @@ function prepareLocalTransfers(){
     });
     transferWorker.on('close', function () {
         config.debug && console.log(new Date().toISOString()+' Closing transfer worker');
-        config.debug && console.timeEnd('trytes-time');
+        console.timeEnd('trytes-time');
     });
 }
 
@@ -483,6 +500,10 @@ function resetPayout(){
     // STOP with setInterval until is called again
     clearInterval(waitConfirm);
 
+    // Finished or canceled transaction, can use power resources again for transaction / spam
+    powInProgress = false;
+    blockSpammingProgress = false;
+
     // Reset minutes before next queue, waiting on transaction confirmation
     queueTimer = 0;
     // Reset count users in actual payout preparation
@@ -511,67 +532,57 @@ function resetPayout(){
 
 function callPoW(){
     if(env === "production"){
-        //doPow(db.select("cache").trytes);
         ccurlWorker();
     } else {
         //emitToAll('boostAttachToTangle', db.select("cache").trytes);
         ccurlWorker();
     }
 }
-function doPow(trytes){
-    config.debug && console.log(new Date().toISOString()+" PoW worker started");
-    config.debug && console.time('pow-time');
-    // Worker for get IOTA balance in interval
-    var powWorker = cp.fork('workers/pow.js');
-    // Send child process work to get IOTA balance
-    //We pass to worker keyIndex where start looking for funds
-    powWorker.send({trytes:trytes});
 
-    powWorker.on('message', function(trytesResult) {
+function doSpamming(){
+    config.debug && console.log(new Date().toISOString()+" Spam worker started");
+    config.debug && console.time('spam-time');
+
+    var spammerWorker = cp.fork('workers/spammer.js');
+    spammerWorker.send("start");
+
+    spammerWorker.on('message', function(result) {
         // Receive results from child process
         // Get completed transaction info
         // Get only hash from attached transaction
-        if(trytesResult.error === 1){
-            config.debug && console.log(new Date().toISOString()+ " Error: doPow");
-            config.debug && console.log(trytesResult);
-            // IF error kill worker and start again after 5 seconds
-            powWorker.kill();
-            resetPayout();
-       } else if(typeof trytesResult[0].bundle !== 'undefined') {
-            tableCache = db.select("cache");
-            tableCache.bundleHash = trytesResult[0].bundle;
-            db.update("cache", tableCache);
-        } else {
-            config.debug && console.log(trytesResult);
+        if(result.error === 1){
+            config.debug && console.error(new Date().toISOString()+ " Error: spammerWorker");
+            config.debug && console.error(result);
+        } else if(typeof result[0].bundle !== 'undefined') {
+            confirmedSpams = parseInt(confirmedSpams) + 2;
+            // Emit actual confirmed transactions by spamming network
+            emitGlobalValues("" ,"confirmedSpams");
+            if(env !== "production"){
+            var theTangleOrgUrl = 'https://thetangle.org/bundle/'+result[0].bundle;
+            config.debug && console.log("Success: bundle from attached transactions " +theTangleOrgUrl);
+            }
         }
-        config.debug && console.log("Success: bundle from attached transactions " + trytesResult[0].bundle);
-        emitGlobalValues("", "bundle");
-        powWorker.kill();
+        spammerWorker.kill();
     });
-    powWorker.on('close', function () {
-        config.debug && console.log(new Date().toISOString()+' Closing PoW worker');
-        config.debug && console.timeEnd('pow-time');
-
-        // Only if this is first doPoW until 5 minutes reset timer, for get exactly 10 min for confirmation
-        if(queueTimer < 10){
-            queueTimer = 0;
-        }
+    spammerWorker.on('close', function () {
+        config.debug && console.log(new Date().toISOString()+' Spammer worker finished');
+        config.debug && console.timeEnd('spam-time');
+        blockSpammingProgress = false;
     });
 }
 
 function ccurlWorker(){
 
     var localAttachToTangle = function(trunkTransaction, branchTransaction, minWeightMagnitude, trytes, callback) {
-        console.log("Light Wallet: localAttachToTangle");
 
         var ccurlHashing = require("../ccurl/index");
 
         ccurlHashing(trunkTransaction, branchTransaction, minWeightMagnitude, trytes, function(error, success) {
             if (error) {
-                config.debug && console.log("Error Light Wallet: ccurl.ccurlHashing finished");
+                config.debug && console.error("Error Light Wallet: ccurl.ccurlHashing finished");
                 config.debug && console.log(error);
             } else {
-                config.debug && console.log("Success Light Wallet: ccurl.ccurlHashing finished");
+                //config.debug && console.log("Success Light Wallet: ccurl.ccurlHashing finished");
             }
             if (callback) {
                 return callback(error, success);
@@ -611,11 +622,13 @@ function ccurlWorker(){
             roundQueueTimer();
 
             config.debug && console.log(new Date().toISOString()+' PoW worker finished');
-            config.debug && console.timeEnd('pow-time');
+            console.timeEnd('pow-time');
+
             powInProgress = false;
+            // We have done PoW for transactions with value, now can use power for spamming
+            blockSpammingProgress = false;
         }
     });
-
 }
 
 function checkNodeLatestMilestone(){
@@ -646,16 +659,14 @@ function checkNodeLatestMilestone(){
         }
     });
 }
-//TODO remove
-//isIotaNodeSynced();
-//
-function isIotaNodeSynced(){
+
+function isNodeSynced(callback){
     config.debug && console.log(new Date().toISOString()+" Checking if node is synced");
     iota.api.getNodeInfo(function(error, success){
         if(error) {
             config.debug && console.log(new Date().toISOString()+" Error occurred while checking if node is synced");
             config.debug && console.log(error);
-            return false;
+            callback(false);
         }
 
         const isNodeUnsynced =
@@ -667,12 +678,10 @@ function isIotaNodeSynced(){
 
         if(isNodeSynced) {
             config.debug && console.log(new Date().toISOString()+" Node is synced");
+            callback(true);
         } else {
             config.debug && console.log(new Date().toISOString()+" Node is not synced.");
-            cacheBalance = " Running syncing of database, please wait! ";
-            setTimeout(function(){
-                isIotaNodeSynced();
-            }, 60000);
+            callback(false);
         }
     });
 }
@@ -769,7 +778,7 @@ function getBalance(){
     });
     balanceWorker.on('close', function () {
         config.debug && console.log(new Date().toISOString()+' Closing balance worker');
-        config.debug && console.timeEnd('balance-time');
+        console.timeEnd('balance-time');
         emitGlobalValues("", "balance");
     });
 }
@@ -855,7 +864,6 @@ io.on('connection', function (socket) {
                 if(queueAddresses.indexOf(fullAddress) >= 0){
                     fn({done:-1,position:(parseInt(queueAddresses.indexOf(fullAddress))+parseInt(1))});
                 } else {
-
                     tableQueue = db.select("queue");
                     // Push type of withdrawal
                     tableQueue.type.push("MANUAL");
@@ -914,7 +922,7 @@ function emitGlobalValues(socket, type){
     var emitData = {};
     switch(String(type)) {
         case "all":
-            emitData = {balance: cacheBalance, bundle: db.select("cache").bundleHash, count: sockets.length, iotaUSD:iotaUSD, totalIotaPerSecond: totalIotaPerSecond, hashIotaRatio: getHashIotaRatio()};
+            emitData = {balance: cacheBalance, bundle: db.select("cache").bundleHash, count: sockets.length, iotaUSD:iotaUSD, totalIotaPerSecond: totalIotaPerSecond, hashIotaRatio: getHashIotaRatio(), confirmedSpams: confirmedSpams};
             break;
         case "online":
             emitData = {count: sockets.length};
@@ -924,6 +932,9 @@ function emitGlobalValues(socket, type){
             break;
         case "bundle":
             emitData = {bundle: db.select("cache").bundleHash};
+            break;
+        case "confirmedSpams":
+            emitData = {confirmedSpams: confirmedSpams};
             break;
         case "rates":
             emitData = {iotaUSD:iotaUSD, totalIotaPerSecond: totalIotaPerSecond, hashIotaRatio: getHashIotaRatio()};

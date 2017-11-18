@@ -21,7 +21,7 @@ html {
   margin-bottom: 10px;
 }
 .header {
-  height: 330px;
+  height: 290px;
   width: 100%;
   background-color: #3E7A78;
   color: #fff;
@@ -129,7 +129,7 @@ td {
   width:100%;
   text-align: right;
 }
-#totalSpeed, #usersQueue{
+#totalSpeed, #usersQueue, #confirmedSpams{
   margin-left: 15px;
 }
 

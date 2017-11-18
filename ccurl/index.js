@@ -22,8 +22,6 @@ module.exports = function(trunkTransaction, branchTransaction, minWeightMagnitud
         var fullPath = ccurlPath + '/ccurl.dll';
     }
 
-    console.log(fullPath);
-
     // Define libccurl to be used for finding the nonce
     var libccurl = ffi.Library(fullPath, {
         ccurl_pow : [ 'string', [ 'string', 'int'] ]
