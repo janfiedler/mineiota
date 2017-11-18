@@ -855,33 +855,26 @@ io.on('connection', function (socket) {
                 if(queueAddresses.indexOf(fullAddress) >= 0){
                     fn({done:-1,position:(parseInt(queueAddresses.indexOf(fullAddress))+parseInt(1))});
                 } else {
-                    // TODO remove after few version, when all will have new version
-                    var address = getAddressWithoutChecksum(fullAddress);
-                    isAddressAttachedToTangle(address, function(result) {
-                        if(result === true){
-                            // Respond success
-                            fn({done:1});
 
-                            tableQueue = db.select("queue");
-                            // Push type of withdrawal
-                            tableQueue.type.push("MANUAL");
-                            // Push socket id to array for get position in queue
-                            tableQueue.ids.push(socket.id);
-                            // Push address to array
-                            tableQueue.addresses.push(fullAddress);
-                            // Send to client position in queue
-                            config.debug && console.log(fullAddress+" is in queue " + (parseInt(tableQueue.ids.indexOf(socket.id))+parseInt(1)));
-                            socket.emit('queuePosition', {position: (parseInt(tableQueue.ids.indexOf(socket.id))+parseInt(1))});
+                    tableQueue = db.select("queue");
+                    // Push type of withdrawal
+                    tableQueue.type.push("MANUAL");
+                    // Push socket id to array for get position in queue
+                    tableQueue.ids.push(socket.id);
+                    // Push address to array
+                    tableQueue.addresses.push(fullAddress);
+                    // Send to client position in queue
+                    config.debug && console.log(fullAddress+" is in queue " + (parseInt(tableQueue.ids.indexOf(socket.id))+parseInt(1)));
+                    socket.emit('queuePosition', {position: (parseInt(tableQueue.ids.indexOf(socket.id))+parseInt(1))});
 
-                            db.update("queue", tableQueue);
-                            tableQueue = null;
-                            // Now update queue position for all users
-                            sendQueuePosition();
-                        } else {
-                            console.log('Error withdraw: '+fullAddress+' address is not attached and confirmed to tangle');
-                            fn({done:0});
-                        }
-                    });
+                    db.update("queue", tableQueue);
+                    tableQueue = null;
+
+                    // Respond success
+                    fn({done:1});
+
+                    // Now update queue position for all users
+                    sendQueuePosition();
                 }
             } else {
                 // Respond error
