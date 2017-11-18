@@ -19,6 +19,7 @@ var hashIotaRatio = 0;
 var totalIotaPerSecond = 0;
 var final = 0;
 var balanceInProgress = false;
+var powInProgress = false;
 var countUsersForPayout = 0;
 // cache global data
 var cacheBalance = 0;
@@ -612,14 +613,16 @@ function ccurlWorker(){
             // Round down queue timer to get get exactly 15 min for confirmation
             roundQueueTimer();
 
-            config.debug && console.log(new Date().toISOString()+' Closing PoW worker');
+            config.debug && console.log(new Date().toISOString()+' PoW worker finished');
             config.debug && console.timeEnd('pow-time');
+            powInProgress = false;
         }
     });
 
 }
 
 function checkNodeLatestMilestone(){
+    powInProgress = true;
     config.debug && console.log(new Date().toISOString()+" Checking if node is synced");
     iota.api.getNodeInfo(function(error, success){
         if(error) {
