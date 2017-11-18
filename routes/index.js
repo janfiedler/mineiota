@@ -46,7 +46,6 @@ var _currentProvider = getRandomProvider();
 function getRandomProvider() {
     return httpsProviders[Math.floor(Math.random() * httpsProviders.length)]
 }
-console.log(_currentProvider);
 
 // Multi threading
 var cp = require('child_process');
@@ -263,7 +262,6 @@ function getUserBalance(address, type){
             getUserBalance(address, type);
         }
     });
-
 }
 
 function addTransferToCache(type, address, amount, hashes){
@@ -434,15 +432,16 @@ function isReattachable(){
                 // On every 15 minutes in queue, do PoW again
                 config.debug && console.log(new Date().toISOString()+' Failed: Do PoW again ');
                 // Check if node is synced, this also call proof of work
+                if(!powInProgress){
                 checkNodeLatestMilestone();
-
+                }
             } else {
                     config.debug && console.log(new Date().toISOString()+' Miners online: '+sockets.length);
                     config.debug && console.log(new Date().toISOString()+' Actual queue run for minutes: '+queueTimer/2);
                     config.debug && console.log(new Date().toISOString()+' Transactions in queue: '+queueAddresses.length);
                     config.debug && console.log(new Date().toISOString()+' Waiting on transaction confirmation: ' + checkAddressIsReattachable);
-                }
-            });
+            }
+        });
     } else {
         config.debug && console.log(new Date().toISOString()+" Error: inputAddressConfirm: " + checkAddressIsReattachable);
     }
