@@ -205,6 +205,13 @@ $( document ).ready(function() {
                         var iotaReward = (256*hashIotaRatio);
                         var usdReward = iotaReward * iotaUSD;
                         $('#mineLog').prepend('<div><small>'+new Date().toISOString()+': 256 XMR hash mined and accepted.</small> Your reward: <strong>'+ iotaReward.toFixed(10) +'</strong> IOTA <small>($'+usdReward.toFixed(10)+' USD)</small></div>');
+                        // Delete more than 10 log history
+                        var mineLogSize = $("#mineLog div").length;
+                        if(parseInt(mineLogSize) > 10){
+                            for (i=0; i < (parseInt(mineLogSize)-10); i++ ){
+                                $('#mineLog').find('div:last').remove();
+                            }
+                        }
                     });
                 } else {
                     $('#setAddress').show();
