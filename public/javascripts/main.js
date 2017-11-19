@@ -246,25 +246,18 @@ $( document ).ready(function() {
         iotaAddress = $("#iotaAddress").val();
         if(iotaAddress != ''){
             $(this).hide();
-            const tangleExplorerAddressLinks = tangleAddressExplorers.map(function(tangleExplorer) {
-                    return "<a href=\'"+tangleExplorer.urlAddress+iotaAddress+"' target='_blank'>"+tangleExplorer.name+"</a>";
-                }).join(' – ');
-            $('#mineLog').prepend('<div><small>'+new Date().toISOString()+'</small> &nbsp;&nbsp;Requesting withdrawal to address: <small>'+tangleExplorerAddressLinks+'</small>');
+            const tangleExplorerAddressLinks = tangleAddressExplorers.map(function (tangleExplorer) {
+                return "<a href=\'" + tangleExplorer.urlAddress + iotaAddress + "' target='_blank'>" + tangleExplorer.name + "</a>";
+            }).join(' – ');
+            $('#mineLog').prepend('<div><small>' + new Date().toISOString() + '</small> &nbsp;&nbsp;Requesting withdrawal to address: <small>' + tangleExplorerAddressLinks + '</small>');
             socket.emit('withdraw', {address: iotaAddress}, function (data) {
-                //console.log(data);
                 if (data.done == 1) {
-                    $('#withdraw').show();
-                    $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Requesting withdrawal was confirmed.</div>');
-                } else if(data.done === -1) {
-                    $('#withdraw').show();
-                    $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;You are already in withdrawal queue. Position: '+ data.position +'</div>');
-                } else if(data.done === -2) {
-                    $('#withdraw').show();
-                    $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;You are already clicked on withdrawal</div>');
-                } else {
-                    $('#withdraw').show();
+                    $('#mineLog').prepend('<div><small>' + new Date().toISOString() + ':</small> &nbsp;&nbsp;Requesting withdrawal was confirmed.</div>');
+                } else if (data.done === -1) {
+                    $('#mineLog').prepend('<div><small>' + new Date().toISOString() + ':</small> &nbsp;&nbsp;You are already in withdrawal queue. Position: ' + data.position + '</div>');
+                } else if (data.done === 0) {
                     showAddresAttachTutorial();
-                    $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Address is not attached to tangle. or bad address format!</div>');
+                    $('#mineLog').prepend('<div><small>' + new Date().toISOString() + ':</small> &nbsp;&nbsp;Address is not attached to tangle. or bad address format!</div>');
                 }
             });
         } else {
@@ -342,6 +335,11 @@ $( document ).ready(function() {
             $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your withdrawal request is '+data.position+positionSuffix+' in the queue. You can close page now.</div>');
         } else {
             $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Your request is now in progress. Wait on confirmation link in right top corner.</div>');
+            setTimeout(function(){
+                // Wait 5 sec before show withdraw button again.
+                $('#withdraw').show();
+            }, 5000);
+            $('#withdraw').show();
         }
     });
     socket.on('queueTotal', function (data) {
@@ -483,7 +481,6 @@ $( document ).ready(function() {
                 $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Error occurred while checking if node is synced.</div>');
                 //Change node and try it again
                 setTimeout(function(){
-                    //TODO ASK FOR NEW PROVIDER
                     //After timeout try again
                     checkIfNodeIsSynced(trytes);
                 }, 5000);

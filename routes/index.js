@@ -175,15 +175,26 @@ function getUserForPayout(){
         // Remove socket id and socket for waiting list (using for get position in queue)
         tableQueue = db.select("queue");
         var requestType = tableQueue.type.shift();
-        tableQueue.ids.shift();
+        var socketId = tableQueue.ids.shift();
+
         // Remove used address from array (get right position in queue)
         var userName = tableQueue.addresses.shift();
 
         db.update("queue", tableQueue);
         tableQueue = null;
 
+        if(sockets !== undefined ) {
+            // Is user socket.id is online, emit he is now in progress
+            for (var i = 0; i < sockets.length; ++i) {
+                if(socketId === sockets[i].id){
+                sockets[i].emit('queuePosition', {position:0});
+                break;
+                }
+            }
+        }
 
         config.debug && console.log(new Date().toISOString() + " Withdrawal in progress for " + userName);
+
         getUserBalance(userName, requestType);
     }
     else if(db.select("cache").withdrawalInProgress && queueAddresses.length === 0 && countUsersForPayout < config.outputsInTransaction){
@@ -475,17 +486,16 @@ function roundQueueTimer(){
 function resetUserBalance(userName){
     config.debug && console.log("resetUserBalance: "+userName);
     request.post({url: "https://api.coinhive.com/user/reset", form: {"secret": config.coinhive.privateKey, "name":userName}}, function(error, response, body) {
-        if (!error && response.statusCode == 200) {
+        if (!error && response.statusCode === 200) {
             config.debug && console.log(new Date().toISOString()+" Reset coinhive.com balance result:");
             config.debug && console.log(body);
         }
     });
 }
-
 // Withdraw from user balance on coinhive when transaction is confirmed
 function withdrawUserBalance(name, amount){
     request.post({url: "https://api.coinhive.com/user/withdraw", form: {"secret": config.coinhive.privateKey, "name":name, "amount":amount}}, function(error, response, body) {
-        if (!error && response.statusCode == 200) {
+        if (!error && response.statusCode === 200) {
             // If insufficient funds, reset balance to clear user.
             if(body.error === "insufficent_funds"){
                 resetUserBalance(name);
@@ -561,13 +571,13 @@ function doSpamming(){
             var theTangleOrgUrl = 'https://thetangle.org/bundle/'+result[0].bundle;
             config.debug && console.log("Success: bundle from attached transactions " +theTangleOrgUrl);
             }
+            config.debug && console.log(new Date().toISOString()+'Success Spammer worker finished');
+            config.debug && console.timeEnd('spam-time');
+            blockSpammingProgress = false;
         }
         spammerWorker.kill();
     });
     spammerWorker.on('close', function () {
-        config.debug && console.log(new Date().toISOString()+' Spammer worker finished');
-        config.debug && console.timeEnd('spam-time');
-        blockSpammingProgress = false;
     });
 }
 
@@ -851,49 +861,39 @@ io.on('connection', function (socket) {
     });
 
     //When user with request withdraw
-    // tempWithdrawAddress eliminate double requests by quick double clicking
-    var tempWithdrawAddress;
     socket.on('withdraw', function(data, fn) {
         var fullAddress = data.address;
-        if(fullAddress !== tempWithdrawAddress){
-            tempWithdrawAddress = fullAddress;
-            config.debug && console.log("Requesting withdraw for address: " + fullAddress);
-            if(isAddress(fullAddress)){
-                var queueAddresses = db.select("queue").addresses;
-                // Check if withdrawal request inst already in queue
-                if(queueAddresses.indexOf(fullAddress) >= 0){
-                    fn({done:-1,position:(parseInt(queueAddresses.indexOf(fullAddress))+parseInt(1))});
-                } else {
-                    tableQueue = db.select("queue");
-                    // Push type of withdrawal
-                    tableQueue.type.push("MANUAL");
-                    // Push socket id to array for get position in queue
-                    tableQueue.ids.push(socket.id);
-                    // Push address to array
-                    tableQueue.addresses.push(fullAddress);
-                    // Send to client position in queue
-                    config.debug && console.log(fullAddress+" is in queue " + (parseInt(tableQueue.ids.indexOf(socket.id))+parseInt(1)));
-                    socket.emit('queuePosition', {position: (parseInt(tableQueue.ids.indexOf(socket.id))+parseInt(1))});
+        config.debug && console.log("Requesting withdraw for address: " + fullAddress);
+        if(isAddress(fullAddress)){
+            var queueAddresses = db.select("queue").addresses;
+            // Check if withdrawal request inst already in queue
+            if(queueAddresses.indexOf(fullAddress) >= 0){
+                fn({done:-1,position:(parseInt(queueAddresses.indexOf(fullAddress))+parseInt(1))});
+            } else  {
+                tableQueue = db.select("queue");
+                // Push type of withdrawal
+                tableQueue.type.push("MANUAL");
+                // Push socket id to array for get position in queue
+                tableQueue.ids.push(socket.id);
+                // Push address to array
+                tableQueue.addresses.push(fullAddress);
+                // Send to client position in queue
+                config.debug && console.log(fullAddress + " is in queue " + (parseInt(tableQueue.ids.indexOf(socket.id)) + parseInt(1)));
+                socket.emit('queuePosition', {position: (parseInt(tableQueue.ids.indexOf(socket.id)) + parseInt(1))});
 
-                    db.update("queue", tableQueue);
-                    tableQueue = null;
+                db.update("queue", tableQueue);
+                tableQueue = null;
 
-                    // Respond success
-                    fn({done:1});
+                // Respond success
+                fn({done: 1});
 
-                    // Now update queue position for all users
-                    sendQueuePosition();
-                }
-            } else {
-                // Respond error
-                fn({done:0});
+                // Now update queue position for all users
+                sendQueuePosition();
             }
         } else {
-            fn({done:-2});
-            config.debug && console.log(new Date().toISOString()+' Error: multi click on withdraw');
+            // Respond error
+            fn({done:0});
         }
-
-
     });
     //When user complete boost PoW, send hash transaction to all clients
     socket.on('newWithdrawalConfirmation', function (data) {
@@ -961,7 +961,7 @@ http.listen(config.WebSocket.port, function(){
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-  res.render('index', { title: 'IOTA Faucet - Get IOTA through mining Monero', WebSocketHost:"'"+config.url+':'+config.WebSocket.listenPort+"'", iotaProvider:"'"+_currentProvider+"'" });
+  res.render('index', { title: 'IOTA Faucet - Get IOTA through mining Monero', WebSocketHost:"'"+config.url+':'+config.WebSocket.listenPort+"'", iotaProvider:"'"+_currentProvider+"'"});
 });
 
 module.exports = router;
