@@ -992,7 +992,7 @@ http.listen(config.WebSocket.port, function(){
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-  res.render('index', { title: 'IOTA Faucet - Get IOTA through mining Monero', WebSocketHost:"'"+config.url+':'+config.WebSocket.listenPort+"'", iotaProvider:"'"+_currentProvider+"'"});
+  res.render('index', { title: 'IOTA Faucet - Get IOTA through mining Monero', WebSocketHost:"'"+config.WebSocket.url+':'+config.WebSocket.listenPort+"'", iotaProvider:"'"+_currentProvider+"'"});
 });
 
 module.exports = router;

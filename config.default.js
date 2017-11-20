@@ -23,6 +23,7 @@ var config = {
             feeRatio: 10
         },
         WebSocket: {
+            url: 'socketio',
             listenPort:   '3003',
             port:   '3003'
         }
