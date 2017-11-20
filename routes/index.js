@@ -1,12 +1,13 @@
 var express = require('express');
-var http = require('http').Server(express);
-var io = require('socket.io')(http);
+var env = process.env.NODE_ENV || 'development';
+var config = require('../config')[env];
+//var io = require('socket.io')(http);
+var io = require('socket.io').listen(config.WebSocket.port);
 var request = require('request');
 var IOTA = require('iota.lib.js');
 var router = express.Router();
 
-var env = process.env.NODE_ENV || 'development';
-var config = require('../config')[env];
+
 
 var db = require('../filedb/app');
 
@@ -985,10 +986,6 @@ function emitToAll(event, data){
         });
     }
 }
-
-// WebSocket  SOCKET.IO listening
-http.listen(config.WebSocket.port, function(){
-});
 
 /* GET home page. */
 router.get('/', function(req, res, next) {

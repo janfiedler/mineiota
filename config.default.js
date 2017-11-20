@@ -52,6 +52,7 @@ var config = {
             feeRatio: 90
         },
         WebSocket: {
+            url: 'socketio',
             listenPort:   '3033',
             port:   '3003'
         }
