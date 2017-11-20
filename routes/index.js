@@ -548,6 +548,7 @@ function resetPayout(){
 }
 
 function callPoW(){
+    powInProgress = true;
     isNodeSynced(function repeat(result) {
         if(result === true){
             if(env === "production"){
