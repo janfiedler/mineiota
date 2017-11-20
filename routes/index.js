@@ -371,7 +371,7 @@ function prepareLocalTransfers(){
             db.update("cache", tableCache);
 
             // Check node sync, this also call proof of work
-            checkNodeLatestMilestone();
+            callPoW();
 
             //We store actual keyIndex for next faster search and transaction
             if(typeof result.keyIndex !== 'undefined'){
@@ -440,7 +440,7 @@ function isReattachable(){
             // If false, transaction was confirmed
             if (!Bool) {
                 //Withdraw user balance only if node is synced (node is only), transactions can be pending and look as confirmed when node is offline
-                isNodeSynced(function(result) {
+                isNodeSynced(function repeat(result) {
                     if(result === true){
                         // We are done, next in queue can go
                         config.debug && console.log(new Date().toISOString()+" Success: Transaction is confirmed: " + checkAddressIsReattachable);
@@ -451,6 +451,8 @@ function isReattachable(){
                         resetPayout();
                         // Get and emit new balance after transaction confirmation
                         getBalance();
+                    } else {
+                        isNodeSynced(repeat());
                     }
                 });
             }  else if (parseInt(queueTimer) > parseInt(90) && parseInt(queueAddresses.length) > 0) {
@@ -464,7 +466,7 @@ function isReattachable(){
                 config.debug && console.log(new Date().toISOString()+' Failed: Do PoW again ');
                 // Check if node is synced, this also call proof of work
                 if(!powInProgress){
-                checkNodeLatestMilestone();
+                    callPoW();
                 }
             } else {
                     config.debug && console.log(new Date().toISOString()+' Miners online: '+sockets.length);
@@ -546,13 +548,19 @@ function resetPayout(){
 }
 
 function callPoW(){
-    if(env === "production"){
-        //ccurlWorker();
-        doPow();
-    } else {
-        //emitToAll('boostAttachToTangle', db.select("cache").trytes);
-        ccurlWorker();
-    }
+    isNodeSynced(function repeat(result) {
+        if(result === true){
+            if(env === "production"){
+                //ccurlWorker();
+                doPow();
+            } else {
+                //emitToAll('boostAttachToTangle', db.select("cache").trytes);
+                ccurlWorker();
+            }
+        } else {
+            isNodeSynced(repeat);
+        }
+    });
 }
 
 function doPow(){
@@ -621,7 +629,7 @@ function doSpamming(){
             var theTangleOrgUrl = 'https://thetangle.org/bundle/'+result[0].bundle;
             config.debug && console.log("Success: bundle from attached transactions " +theTangleOrgUrl);
             }
-            config.debug && console.log(new Date().toISOString()+'Success Spammer worker finished');
+            config.debug && console.log(new Date().toISOString()+' Success Spammer worker finished');
             config.debug && console.timeEnd('spam-time');
             blockSpammingProgress = false;
         }
@@ -663,10 +671,11 @@ function ccurlWorker(){
             console.error("Sorry, something wrong happened... lets try it again after 5 sec");
             config.debug && console.error(error);
             config.debug && console.timeEnd('pow-time');
-            // Check if node is synced, this also call proof of work
+
             roundQueueTimer();
+            // Check if node is synced, this also call proof of work
             setTimeout(function(){
-                checkNodeLatestMilestone();
+                callPoW();
             }, 5000);
 
         } else {
@@ -687,35 +696,6 @@ function ccurlWorker(){
             powInProgress = false;
             // We have done PoW for transactions with value, now can use power for spamming
             blockSpammingProgress = false;
-        }
-    });
-}
-
-function checkNodeLatestMilestone(){
-    powInProgress = true;
-    config.debug && console.log(new Date().toISOString()+" Checking if node is synced");
-    iota.api.getNodeInfo(function(error, success){
-        if(error) {
-            config.debug && console.log(new Date().toISOString()+" Error occurred while checking if node is synced");
-            config.debug && console.log(error);
-            return false;
-        }
-
-        const isNodeUnsynced =
-            success.latestMilestone == config.iota.seed ||
-            success.latestSolidSubtangleMilestone == config.iota.seed ||
-            success.latestSolidSubtangleMilestoneIndex < success.latestMilestoneIndex;
-
-        const isNodeSynced = !isNodeUnsynced;
-
-        if(isNodeSynced) {
-            config.debug && console.log(new Date().toISOString()+" Node is synced");
-            callPoW();
-        } else {
-            config.debug && console.log(new Date().toISOString()+" Node is not synced.");
-            setTimeout(function(){
-                checkNodeLatestMilestone();
-            }, 5000);
         }
     });
 }
