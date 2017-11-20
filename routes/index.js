@@ -607,6 +607,7 @@ function doSpamming(){
         if(result.error === 1){
             config.debug && console.error(new Date().toISOString()+ " Error: spammerWorker");
             config.debug && console.error(result);
+            blockSpammingProgress = false;
         } else if(typeof result[0].bundle !== 'undefined') {
             confirmedSpams = parseInt(confirmedSpams) + 2;
             // Emit actual confirmed transactions by spamming network
