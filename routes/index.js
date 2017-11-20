@@ -542,11 +542,55 @@ function resetPayout(){
 
 function callPoW(){
     if(env === "production"){
-        ccurlWorker();
+        //ccurlWorker();
+        doPow();
     } else {
         //emitToAll('boostAttachToTangle', db.select("cache").trytes);
         ccurlWorker();
     }
+}
+
+function doPow(){
+    config.debug && console.log(new Date().toISOString()+" PoW worker started");
+    config.debug && console.time('pow-time');
+    // Worker for get IOTA balance in interval
+    var powWorker = cp.fork('workers/pow.js');
+    // Send child process work to get IOTA balance
+    //We pass to worker keyIndex where start looking for funds
+    powWorker.send({trytes:db.select("cache").trytes});
+
+    powWorker.on('message', function(trytesResult) {
+        // Receive results from child process
+        // Get completed transaction info
+        // Get only hash from attached transaction
+        if(trytesResult.error === 1){
+            config.debug && console.log(new Date().toISOString()+ " Error: doPow");
+            config.debug && console.log(trytesResult);
+            // IF error kill worker and start again after 5 seconds
+            powWorker.kill();
+            resetPayout();
+        } else if(typeof trytesResult[0].bundle !== 'undefined') {
+            tableCache = db.select("cache");
+            tableCache.bundleHash = trytesResult[0].bundle;
+            db.update("cache", tableCache);
+        } else {
+            config.debug && console.log(trytesResult);
+        }
+        config.debug && console.log("Success: bundle from attached transactions " + trytesResult[0].bundle);
+        emitGlobalValues("", "bundle");
+
+        roundQueueTimer();
+
+        powInProgress = false;
+        // We have done PoW for transactions with value, now can use power for spamming
+        blockSpammingProgress = false;
+        powWorker.kill();
+    });
+    powWorker.on('close', function () {
+        config.debug && console.log(new Date().toISOString()+' Closing PoW worker');
+        config.debug && console.timeEnd('pow-time');
+
+    });
 }
 
 function doSpamming(){
