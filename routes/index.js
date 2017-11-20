@@ -441,21 +441,23 @@ function isReattachable(){
             // If false, transaction was confirmed
             if (!Bool) {
                 //Withdraw user balance only if node is synced (node is only), transactions can be pending and look as confirmed when node is offline
-                isNodeSynced(function repeat(result) {
-                    if(result === true){
-                        // We are done, next in queue can go
-                        config.debug && console.log(new Date().toISOString()+" Success: Transaction is confirmed: " + checkAddressIsReattachable);
-                        db.select("cache").resetUserBalanceList.forEach(function(user) {
-                            withdrawUserBalance(user.name, user.amount);
-                        });
-                        // We are done, unset the cache values
-                        resetPayout();
-                        // Get and emit new balance after transaction confirmation
-                        getBalance();
-                    } else {
-                        isNodeSynced(repeat());
-                    }
-                });
+                if(!balanceInProgress) {
+                    isNodeSynced(function repeat(result) {
+                        if (result === true) {
+                            // We are done, next in queue can go
+                            config.debug && console.log(new Date().toISOString() + " Success: Transaction is confirmed: " + checkAddressIsReattachable);
+                            db.select("cache").resetUserBalanceList.forEach(function (user) {
+                                withdrawUserBalance(user.name, user.amount);
+                            });
+                            // We are done, unset the cache values
+                            resetPayout();
+                            // Get and emit new balance after transaction confirmation
+                            getBalance();
+                        } else {
+                            isNodeSynced(repeat());
+                        }
+                    });
+                }
             }  else if (parseInt(queueTimer) > parseInt(90) && parseInt(queueAddresses.length) > 0) {
                 // In transaction is not confirmed after 45 minutes, skipping to the next in queue
                 config.debug && console.log(new Date().toISOString() + 'Error: Transaction is not confirmed after 45 minutes, skipping to the next in queue');
