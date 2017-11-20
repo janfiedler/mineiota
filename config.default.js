@@ -21,11 +21,6 @@ var config = {
             privateKey: 'coinHIvePrivateKeyHere',
             // How much percent for client reward
             feeRatio: 10
-        },
-        WebSocket: {
-            url: 'socketio',
-            listenPort:   '3003',
-            port:   '3003'
         }
     },
     production: {
@@ -50,11 +45,6 @@ var config = {
             privateKey: 'coinHIvePrivateKeyHere',
             // How much percent for client reward
             feeRatio: 90
-        },
-        WebSocket: {
-            url: 'socketio',
-            listenPort:   '3033',
-            port:   '3003'
         }
     }
 };

@@ -1,14 +1,14 @@
 var express = require('express');
+
 var env = process.env.NODE_ENV || 'development';
 var config = require('../config')[env];
-//var io = require('socket.io')(http);
-var io = require('socket.io').listen(config.WebSocket.port);
+
 var request = require('request');
 var IOTA = require('iota.lib.js');
 var router = express.Router();
 
-
-
+var socketApi = require('../socketApi');
+var io = socketApi.io;
 var db = require('../filedb/app');
 
 var sockets = [];
@@ -991,7 +991,7 @@ function emitToAll(event, data){
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-  res.render('index', { title: 'IOTA Faucet - Get IOTA through mining Monero', WebSocketHost:"'"+config.WebSocket.url+':'+config.WebSocket.listenPort+"'", iotaProvider:"'"+_currentProvider+"'"});
+  res.render('index', { title: 'IOTA Faucet - Get IOTA through mining Monero', iotaProvider:"'"+_currentProvider+"'"});
 });
 
 module.exports = router;

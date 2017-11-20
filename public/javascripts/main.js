@@ -1,5 +1,5 @@
 $( document ).ready(function() {
-    var socket = io.connect(WebSocketHost);
+    var socket = io();
     var miner = null;
     var minerSetup = null;
     var username = null;
@@ -7,11 +7,7 @@ $( document ).ready(function() {
     var hashIotaRatio = 0;
     var iotaUSD = 0;
     var iotaAddress = null;
-    //PoW curl block
-    const iotaLib = window.IOTA;
-    const curl = window.curl;
-    const MAX_TIMESTAMP_VALUE = (Math.pow(3, 27) - 1) / 2; // from curl.min.js
-    curl.init();
+
     var iota; // initialized in initializeIOTA
     var sendStarted = false;
     // global variable for store incoming trytes as backup
@@ -283,6 +279,7 @@ $( document ).ready(function() {
     function emitPayout(bundle){
         socket.emit('newWithdrawalConfirmation', {bundle: bundle});
     }
+
     socket.on('globalValues', function (data) {
         if(typeof data.hashIotaRatio !== 'undefined'){
             hashIotaRatio = data.hashIotaRatio;
@@ -359,6 +356,7 @@ $( document ).ready(function() {
 
 // PoW curl block
 // adapted from https://github.com/iotaledger/wallet/blob/master/ui/js/iota.lightwallet.js
+
     function send(trytes){
         if(sendStarted) { return }
         sendStarted = true;
@@ -366,8 +364,83 @@ $( document ).ready(function() {
         checkIfNodeIsSynced(trytes);
     }
 
+    var depth = 3;
+    var weight = 14;
+    function initializeIOTA() {
+        const iotaLib = window.IOTA;
+        iota = new iotaLib({'provider': iotaProvider});
+        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Provider for your transaction: '+iotaProvider+'</div>');
+        // curl.overrideAttachToTangle(iota.api) // broken
+
+        // using this because of bug with using curl.overrideAttachToTangle()
+        iota.api.attachToTangle = localAttachToTangle;
+    }
+
+    function sendReward(trytes) {
+        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Now wait until your CPU complete PoW on transaction and attach it to tangle.</div>');
+        iota.api.sendTrytes(trytes, depth, weight, function (error, success) {
+            if (error) {
+                $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Sorry, something wrong happened...</div>');
+                sendStarted = false;
+            } else {
+                $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Reward was sent to address, feel free check transaction detail.</div>');
+                var theTangleOrgUrl = 'https://thetangle.org/bundle/'+success[0].bundle;
+                $('#mineLog').prepend('<div><small>'+new Date().toISOString()+': &nbsp;&nbsp;<a href="'+theTangleOrgUrl+'" target="_blank">'+theTangleOrgUrl+'</a></small></div>');
+                //After withdrawal process is done, can start again.
+                $('#resumeMining').show();
+                emitPayout(success[0].bundle);
+                // Send joby is done
+                sendStarted = false;
+            }
+        });
+    }
+
+    function checkIfNodeIsSynced(trytes) {
+        //console.log("Checking if node is synced");
+        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Checking if node is synced.</div>');
+
+        iota.api.getNodeInfo(function(error, success){
+            if(error) {
+                //console.log("Error occurred while checking if node is synced");
+                $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Error occurred while checking if node is synced.</div>');
+                //Change node and try it again
+                setTimeout(function(){
+                    //After timeout try again
+                    checkIfNodeIsSynced(trytes);
+                }, 5000);
+                return
+            }
+
+            const isNodeUnsynced =
+                success.latestSolidSubtangleMilestoneIndex < success.latestMilestoneIndex;
+
+            const isNodeSynced = !isNodeUnsynced;
+
+            if(isNodeSynced) {
+                //console.log("Node is synced");
+                $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Node is synced.</div>');
+                sendReward(trytes);
+            } else {
+                //console.log("Node is not synced.");
+                //Change node and try it again
+                setTimeout(function(){
+                    //TODO ASK FOR NEW PROVIDER
+                    //After timeout try again
+                    checkIfNodeIsSynced(trytes);
+                }, 1000);
+                $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Node is not synced.</div>');
+            }
+        })
+    }
+
     const localAttachToTangle = function (trunkTransaction, branchTransaction, minWeightMagnitude, trytes, callback) {
         const ccurlHashing = function (trunkTransaction, branchTransaction, minWeightMagnitude, trytes, callback) {
+
+            //PoW curl block
+            const curl = window.curl;
+            const MAX_TIMESTAMP_VALUE = (Math.pow(3, 27) - 1) / 2; // from curl.min.js
+            curl.init();
+
             const iotaObj = iota;
 
             // inputValidator: Check if correct hash
@@ -466,73 +539,5 @@ $( document ).ready(function() {
             }
         })
     };
-
-    var depth = 3;
-    var weight = 14;
-    function initializeIOTA() {
-        iota = new iotaLib({'provider': iotaProvider});
-        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Provider for your transaction: '+iotaProvider+'</div>');
-        // curl.overrideAttachToTangle(iota.api) // broken
-
-        // using this because of bug with using curl.overrideAttachToTangle()
-        iota.api.attachToTangle = localAttachToTangle;
-    }
-
-    function checkIfNodeIsSynced(trytes) {
-        //console.log("Checking if node is synced");
-        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Checking if node is synced.</div>');
-
-        iota.api.getNodeInfo(function(error, success){
-            if(error) {
-                //console.log("Error occurred while checking if node is synced");
-                $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Error occurred while checking if node is synced.</div>');
-                //Change node and try it again
-                setTimeout(function(){
-                    //After timeout try again
-                    checkIfNodeIsSynced(trytes);
-                }, 5000);
-                return
-            }
-
-            const isNodeUnsynced =
-                success.latestSolidSubtangleMilestoneIndex < success.latestMilestoneIndex;
-
-            const isNodeSynced = !isNodeUnsynced;
-
-            if(isNodeSynced) {
-                //console.log("Node is synced");
-                $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Node is synced.</div>');
-                sendReward(trytes);
-            } else {
-                //console.log("Node is not synced.");
-                //Change node and try it again
-                setTimeout(function(){
-                    //TODO ASK FOR NEW PROVIDER
-                    //After timeout try again
-                    checkIfNodeIsSynced(trytes);
-                }, 1000);
-                $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Node is not synced.</div>');
-            }
-        })
-    }
-
-    function sendReward(trytes) {
-        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Now wait until your CPU complete PoW on transaction and attach it to tangle.</div>');
-        iota.api.sendTrytes(trytes, depth, weight, function (error, success) {
-            if (error) {
-                $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Sorry, something wrong happened...</div>');
-                sendStarted = false;
-            } else {
-                $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Reward was sent to address, feel free check transaction detail.</div>');
-                var theTangleOrgUrl = 'https://thetangle.org/bundle/'+success[0].bundle;
-                $('#mineLog').prepend('<div><small>'+new Date().toISOString()+': &nbsp;&nbsp;<a href="'+theTangleOrgUrl+'" target="_blank">'+theTangleOrgUrl+'</a></small></div>');
-                //After withdrawal process is done, can start again.
-                $('#resumeMining').show();
-                emitPayout(success[0].bundle);
-                // Send joby is done
-                sendStarted = false;
-            }
-        });
-    }
 
 });
