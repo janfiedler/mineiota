@@ -179,7 +179,10 @@ setInterval(function () {
             if(result === true){
                 doSpamming();
             } else {
-                blockSpammingProgress = false;
+                setTimeout(function(){
+                    blockSpammingProgress = false;
+                }, 5000);
+
             }
         });
     }
