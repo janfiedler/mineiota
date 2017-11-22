@@ -60,23 +60,39 @@ var iota = new IOTA({
 
 // Init
 // Request on startup
-getBalance();
-getPayoutPer1MHashes();
-getXmrToBtc();
-getIotaPrice();
+
+getRates("balance");
+getRates("price");
 
 setInterval(function () {
-    // Get actual iota/s speed
-    getTotalIotaPerSecond();
-    getPayoutPer1MHashes();
-    getXmrToBtc();
-    getIotaPrice();
-
+    getRates("price");
     // Wait 5 seconds and send new data to users
     setTimeout(function(){
         emitGlobalValues("", "rates");
     }, 5000);
 }, 60000);
+
+function getRates(type){
+    switch(String(type)) {
+        case "balance":
+            isNodeSynced(function repeat(result) {
+                if (result === true) {
+                    getBalance();
+                } else {
+                    setTimeout(function(){
+                        isNodeSynced(repeat());
+                    }, 30000);
+                }
+            });
+            break;
+        case "price":
+            getTotalIotaPerSecond();
+            getPayoutPer1MHashes();
+            getXmrToBtc();
+            getIotaPrice();
+            break;
+    }
+}
 
 // #BLOCK GET ALL NEEDED DATA FOR CALCULATE PAYOUT
 function getHashIotaRatio(){
@@ -452,9 +468,11 @@ function isReattachable(){
                             // We are done, unset the cache values
                             resetPayout();
                             // Get and emit new balance after transaction confirmation
-                            getBalance();
+                            getRates("balance");
                         } else {
-                            isNodeSynced(repeat());
+                            setTimeout(function(){
+                                isNodeSynced(repeat());
+                            }, 30000);
                         }
                     });
                 }
@@ -562,7 +580,9 @@ function callPoW(){
                 ccurlWorker();
             }
         } else {
-            isNodeSynced(repeat);
+            setTimeout(function(){
+                isNodeSynced(repeat());
+            }, 30000);
         }
     });
 }
