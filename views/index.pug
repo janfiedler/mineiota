@@ -11,12 +11,18 @@ block content
         | IOTA
       p.headerDesc IOTA Faucet - Get IOTA through mining Monero
     section
-      table.table-fill
+      table.table-faucet
         thead
           tr
-            th.rank__title Faucet balance available: &nbsp;
+            th.th-balance Faucet balance available: &nbsp;
               span#faucetBalance 0
               |  IOTA
+          tr
+            th.th-tips
+                ul.nav
+                    li.nav-link Tips for spend:
+                    li.nav-item
+                        a.nav-link.disabled(href="http://iotart.io/",target="_blank") iotart.io
         tbody
           tr
             td

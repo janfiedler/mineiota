@@ -60,7 +60,7 @@ html {
   **  Table
   **/
 
-.table-fill {
+.table-faucet {
   max-width: 800px;
   padding:5px;
   width: 100%;
@@ -71,10 +71,11 @@ html {
   top: -180px;
 }
 
-th {
+.th-balance {
+  border-top-left-radius: 25px;
+  border-top-right-radius: 25px;
   color:#fff;;
   background: #1b1e24;
-  border-bottom: 4px solid #9ea7af;
   font-size:23px;
   font-weight: 100;
   padding: 24px;
@@ -82,12 +83,11 @@ th {
   vertical-align:middle;
   text-align: center;
 }
-
-th:first-child {
-  border-top-left-radius: 25px;
-  border-top-right-radius: 25px;
+.th-tips {
+  background-color:#eeeeee;
+  text-align: center;
+  font-weight: normal;
 }
-
 th:nth-child(2) {
   border-right: 1px solid #343a45;
   border-left: 1px solid #343a45;
@@ -96,10 +96,6 @@ th:nth-child(2) {
 th:nth-child(3) {
   border-right: 1px solid #343a45;
   border-left: 1px solid #343a45;
-}
-
-th:last-child {
-  border-top-right-radius: 25px;
 }
 
 tr {
