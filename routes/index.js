@@ -734,21 +734,21 @@ function isNodeSynced(callback){
             config.debug && console.log(new Date().toISOString()+" Error occurred while checking if node is synced");
             config.debug && console.log(error);
             callback(false);
-        }
-
-        const isNodeUnsynced =
-            success.latestMilestone == config.iota.seed ||
-            success.latestSolidSubtangleMilestone == config.iota.seed ||
-            success.latestSolidSubtangleMilestoneIndex < success.latestMilestoneIndex;
-
-        const isNodeSynced = !isNodeUnsynced;
-
-        if(isNodeSynced) {
-            config.debug && console.log(new Date().toISOString()+" Node is synced");
-            callback(true);
         } else {
-            config.debug && console.log(new Date().toISOString()+" Node is not synced.");
-            callback(false);
+            const isNodeUnsynced =
+                success.latestMilestone == config.iota.seed ||
+                success.latestSolidSubtangleMilestone == config.iota.seed ||
+                success.latestSolidSubtangleMilestoneIndex < success.latestMilestoneIndex;
+
+            const isNodeSynced = !isNodeUnsynced;
+
+            if(isNodeSynced) {
+                config.debug && console.log(new Date().toISOString()+" Node is synced");
+                callback(true);
+            } else {
+                config.debug && console.log(new Date().toISOString()+" Node is not synced.");
+                callback(false);
+            }
         }
     });
 }
