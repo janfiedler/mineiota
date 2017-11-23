@@ -159,7 +159,7 @@ setInterval(function () {
         db.update("cache", tableCache);
 
         getUserForPayout();
-    } else if (queueAddresses.length === 0 && cacheBalance > 0 && hashIotaRatio > 0 && !db.select("cache").withdrawalInProgress && !balanceInProgress && !blockSpammingProgress && env === "production"){
+    } else if (queueAddresses.length === 0 && cacheBalance > 0 && hashIotaRatio > 0 && !db.select("cache").withdrawalInProgress && !balanceInProgress && !blockSpammingProgress && config.automaticWithdrawal){
         // If queue is empty, make auto withdrawal to unpaid users
         config.debug && console.log(new Date().toISOString()+" Queue is empty, make auto withdrawal to unpaid users");
 
