@@ -226,7 +226,7 @@ function getUserForPayout(){
 
         getUserBalance(userName, requestType);
     }
-    else if(db.select("cache").withdrawalInProgress && queueAddresses.length === 0 && countUsersForPayout < config.outputsInTransaction){
+    else if(db.select("cache").withdrawalInProgress && queueAddresses.length === 0 && countUsersForPayout < config.outputsInTransaction && config.automaticWithdrawal){
         var outputsTransactionLeft = parseInt(config.outputsInTransaction) - parseInt(countUsersForPayout);
         if(outputsTransactionLeft > 0){
             getTopUsers(outputsTransactionLeft);
