@@ -584,38 +584,24 @@ function resetPayout(){
 function callPoW(){
     if(!powInProgress){
         powInProgress = true;
-        isNodeSynced(function repeat(err, synced) {
-            //if (err) throw err; // Check for the error and throw if it exists.
-            if(synced){
-                if(env === "production"){
-                    //ccurlWorker();
-                    doPow();
+        var taskIsNodeSynced = function () {
+            isNodeSynced("callPoW", function repeat(error, synced) {
+                if (synced) {
+                    if(env === "production"){
+                        //ccurlWorker();
+                        doPow();
+                    } else {
+                        //emitToAll('boostAttachToTangle', db.select("cache").trytes);
+                        ccurlWorker();
+                    }
                 } else {
-                    //emitToAll('boostAttachToTangle', db.select("cache").trytes);
-                    ccurlWorker();
+                    setTimeout(function(){
+                        taskIsNodeSynced();
+                    }, 30000);
                 }
-            } else {
-                setTimeout(function(){
-                    isNodeSynced(repeat(err, synced));
-                }, 30000);
-            }
-        });
-        /*
-        isNodeSynced(function repeat(error, result) {
-            if(result === true){
-                if(env === "production"){
-                    //ccurlWorker();
-                    doPow();
-                } else {
-                    //emitToAll('boostAttachToTangle', db.select("cache").trytes);
-                    ccurlWorker();
-                }
-            } else if (result === false) {
-                setTimeout(function(){
-                    isNodeSynced(repeat());
-                }, 30000);
-            }
-        });*/
+            });
+        };
+        taskIsNodeSynced();
     }
 }
 
