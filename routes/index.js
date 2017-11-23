@@ -75,15 +75,20 @@ setInterval(function () {
 function getRates(type){
     switch(String(type)) {
         case "balance":
-            isNodeSynced(function repeat(result) {
-                if (result === true) {
-                    getBalance();
-                } else {
-                    setTimeout(function(){
-                        isNodeSynced(repeat());
-                    }, 30000);
-                }
-            });
+            // Set balanceInProgress also here for block spamming, until balance progress is done
+            balanceInProgress = true;
+            var taskIsNodeSynced = function () {
+                isNodeSynced("getRates (balance)", function (error, synced) {
+                    if (synced) {
+                        getBalance();
+                    } else {
+                        setTimeout(function () {
+                            taskIsNodeSynced();
+                        }, 5000);
+                    }
+                });
+            };
+            taskIsNodeSynced();
             break;
         case "price":
             getTotalIotaPerSecond();
@@ -175,16 +180,20 @@ setInterval(function () {
         //Experiment with spamming mode when no withdrawal
         blockSpammingProgress = true;
 
-        isNodeSynced(function(result) {
-            if(result === true){
-                doSpamming();
-            } else {
-                setTimeout(function(){
-                    blockSpammingProgress = false;
-                }, 5000);
+        var taskIsNodeSynced = function () {
+            isNodeSynced("doSpamming", function repeat(error, result) {
+                if(result){
+                    doSpamming();
+                } else {
+                    setTimeout(function(){
+                        taskIsNodeSynced();
+                    }, 5000);
 
-            }
-        });
+                }
+            });
+        };
+        taskIsNodeSynced();
+
     }
 }, 1000);
 
@@ -461,23 +470,26 @@ function isReattachable(){
             if (!Bool) {
                 //Withdraw user balance only if node is synced (node is only), transactions can be pending and look as confirmed when node is offline
                 if(!balanceInProgress) {
-                    isNodeSynced(function repeat(result) {
-                        if (result === true) {
-                            // We are done, next in queue can go
-                            config.debug && console.log(new Date().toISOString() + " Success: Transaction is confirmed: " + checkAddressIsReattachable);
-                            db.select("cache").resetUserBalanceList.forEach(function (user) {
-                                withdrawUserBalance(user.name, user.amount);
-                            });
-                            // We are done, unset the cache values
-                            resetPayout();
-                            // Get and emit new balance after transaction confirmation
-                            getRates("balance");
-                        } else {
-                            setTimeout(function(){
-                                isNodeSynced(repeat());
-                            }, 30000);
-                        }
-                    });
+                    var taskIsNodeSynced = function () {
+                        isNodeSynced("isReattachable", function repeat(error, synced) {
+                            if (synced) {
+                                // We are done, next in queue can go
+                                config.debug && console.log(new Date().toISOString() + " Success: Transaction is confirmed: " + checkAddressIsReattachable);
+                                db.select("cache").resetUserBalanceList.forEach(function (user) {
+                                    withdrawUserBalance(user.name, user.amount);
+                                });
+                                // We are done, unset the cache values
+                                resetPayout();
+                                // Get and emit new balance after transaction confirmation
+                                getRates("balance");
+                            } else {
+                                setTimeout(function(){
+                                    taskIsNodeSynced();
+                                }, 30000);
+                            }
+                        });
+                    };
+                    taskIsNodeSynced();
                 }
             }  else if (parseInt(queueTimer) > parseInt(90) && parseInt(queueAddresses.length) > 0) {
                 // In transaction is not confirmed after 45 minutes, skipping to the next in queue
@@ -572,8 +584,9 @@ function resetPayout(){
 function callPoW(){
     if(!powInProgress){
         powInProgress = true;
-        isNodeSynced(function repeat(result) {
-            if(result === true){
+        isNodeSynced(function repeat(err, synced) {
+            //if (err) throw err; // Check for the error and throw if it exists.
+            if(synced){
                 if(env === "production"){
                     //ccurlWorker();
                     doPow();
@@ -583,10 +596,26 @@ function callPoW(){
                 }
             } else {
                 setTimeout(function(){
-                    isNodeSynced(repeat());
+                    isNodeSynced(repeat(err, synced));
                 }, 30000);
             }
         });
+        /*
+        isNodeSynced(function repeat(error, result) {
+            if(result === true){
+                if(env === "production"){
+                    //ccurlWorker();
+                    doPow();
+                } else {
+                    //emitToAll('boostAttachToTangle', db.select("cache").trytes);
+                    ccurlWorker();
+                }
+            } else if (result === false) {
+                setTimeout(function(){
+                    isNodeSynced(repeat());
+                }, 30000);
+            }
+        });*/
     }
 }
 
@@ -727,13 +756,13 @@ function ccurlWorker(){
     });
 }
 
-function isNodeSynced(callback){
-    config.debug && console.log(new Date().toISOString()+" Checking if node is synced");
+function isNodeSynced(type, callback){
+    config.debug && console.log(new Date().toISOString()+" Checking if node is synced: " + type);
     iota.api.getNodeInfo(function(error, success){
         if(error) {
             config.debug && console.log(new Date().toISOString()+" Error occurred while checking if node is synced");
             config.debug && console.log(error);
-            callback(false);
+            callback(null, false);
         } else {
             const isNodeUnsynced =
                 success.latestMilestone == config.iota.seed ||
@@ -744,12 +773,13 @@ function isNodeSynced(callback){
 
             if(isNodeSynced) {
                 config.debug && console.log(new Date().toISOString()+" Node is synced");
-                callback(true);
+                callback(null, true);
             } else {
                 config.debug && console.log(new Date().toISOString()+" Node is not synced.");
-                callback(false);
+                callback(null, false);
             }
         }
+
     });
 }
 
@@ -759,22 +789,22 @@ function isAddressAttachedToTangle(address,callback) {
         if(!errors){
             if (success.length === 0) {
                 //config.debug && console.log(new Date().toISOString()+' Error: '+address+' is not attached and confirmed to tangle! ');
-                callback(false);
+                callback(null, false);
             } else {
                 iota.api.getLatestInclusion(success, function (errors, success) {
                     if (success.length === 0) {
                         //config.debug && console.log(new Date().toISOString()+' Error: '+address+' is not attached and confirmed to tangle! ');
-                        callback(false);
+                        callback(null, false);
                     } else {
                         //
                         for (var i = 0, len = success.length; i < len; i++) {
                             if(success[i] === true){
-                                callback(true);
+                                callback(null, true);
                                 return;
                             }
                         }
                         //config.debug && console.log(new Date().toISOString()+' Error: '+address+' is not attached and confirmed to tangle! ');
-                        callback(false);
+                        callback(null, false);
                     }
                 })
             }
