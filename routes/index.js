@@ -461,56 +461,58 @@ function checkReattachable(inputAddress){
 }
 // Checking if transaction is confirmed
 function isReattachable(){
-    var checkAddressIsReattachable = db.select("cache").isReattachable;
-    var queueAddresses = db.select("queue").addresses;
-    if(checkAddressIsReattachable !== null) {
-        queueTimer++;
-        iota.api.isReattachable(checkAddressIsReattachable, function (errors, Bool) {
-            // If false, transaction was confirmed
-            if (!Bool) {
-                //Withdraw user balance only if node is synced (node is only), transactions can be pending and look as confirmed when node is offline
-                if(!balanceInProgress) {
-                    var taskIsNodeSynced = function () {
-                        isNodeSynced("isReattachable", function repeat(error, synced) {
-                            if (synced) {
-                                // We are done, next in queue can go
-                                config.debug && console.log(new Date().toISOString() + " Success: Transaction is confirmed: " + checkAddressIsReattachable);
-                                db.select("cache").resetUserBalanceList.forEach(function (user) {
-                                    withdrawUserBalance(user.name, user.amount);
-                                });
-                                // We are done, unset the cache values
-                                resetPayout();
-                                // Get and emit new balance after transaction confirmation
-                                getRates("balance");
-                            } else {
-                                setTimeout(function(){
-                                    taskIsNodeSynced();
-                                }, 30000);
-                            }
-                        });
-                    };
-                    taskIsNodeSynced();
+    if(!powInProgress) {
+        var checkAddressIsReattachable = db.select("cache").isReattachable;
+        var queueAddresses = db.select("queue").addresses;
+        if (checkAddressIsReattachable !== null) {
+            queueTimer++;
+            iota.api.isReattachable(checkAddressIsReattachable, function (errors, Bool) {
+                // If false, transaction was confirmed
+                if (!Bool) {
+                    //Withdraw user balance only if node is synced (node is only), transactions can be pending and look as confirmed when node is offline
+                    if (!balanceInProgress) {
+                        var taskIsNodeSynced = function () {
+                            isNodeSynced("isReattachable", function repeat(error, synced) {
+                                if (synced) {
+                                    // We are done, next in queue can go
+                                    config.debug && console.log(new Date().toISOString() + " Success: Transaction is confirmed: " + checkAddressIsReattachable);
+                                    db.select("cache").resetUserBalanceList.forEach(function (user) {
+                                        withdrawUserBalance(user.name, user.amount);
+                                    });
+                                    // We are done, unset the cache values
+                                    resetPayout();
+                                    // Get and emit new balance after transaction confirmation
+                                    getRates("balance");
+                                } else {
+                                    setTimeout(function () {
+                                        taskIsNodeSynced();
+                                    }, 30000);
+                                }
+                            });
+                        };
+                        taskIsNodeSynced();
+                    }
+                } else if (parseInt(queueTimer) > parseInt(90) && parseInt(queueAddresses.length) > 0) {
+                    // In transaction is not confirmed after 45 minutes, skipping to the next in queue
+                    config.debug && console.log(new Date().toISOString() + 'Error: Transaction is not confirmed after 45 minutes, skipping to the next in queue');
+                    // Error: Transaction is not confirmed, resetPayout
+                    resetPayout();
+                } else if (isInteger(parseInt(queueTimer) / parseInt(30)) && parseInt(queueTimer) !== 0) {
+                    // Add one minute to queue timer
+                    // On every 15 minutes in queue, do PoW again
+                    config.debug && console.log(new Date().toISOString() + ' Failed: Do PoW again ');
+                    // Check if node is synced, this also call proof of work
+                    callPoW();
+                } else {
+                    config.debug && console.log(new Date().toISOString() + ' Miners online: ' + sockets.length);
+                    config.debug && console.log(new Date().toISOString() + ' Actual queue run for minutes: ' + queueTimer / 2);
+                    config.debug && console.log(new Date().toISOString() + ' Transactions in queue: ' + queueAddresses.length);
+                    config.debug && console.log(new Date().toISOString() + ' Waiting on transaction confirmation: ' + checkAddressIsReattachable);
                 }
-            }  else if (parseInt(queueTimer) > parseInt(90) && parseInt(queueAddresses.length) > 0) {
-                // In transaction is not confirmed after 45 minutes, skipping to the next in queue
-                config.debug && console.log(new Date().toISOString() + 'Error: Transaction is not confirmed after 45 minutes, skipping to the next in queue');
-                // Error: Transaction is not confirmed, resetPayout
-                resetPayout();
-            } else if (isInteger(parseInt(queueTimer)/parseInt(30)) && parseInt(queueTimer) !== 0) {
-                // Add one minute to queue timer
-                // On every 15 minutes in queue, do PoW again
-                config.debug && console.log(new Date().toISOString()+' Failed: Do PoW again ');
-                // Check if node is synced, this also call proof of work
-                callPoW();
-            } else {
-                    config.debug && console.log(new Date().toISOString()+' Miners online: '+sockets.length);
-                    config.debug && console.log(new Date().toISOString()+' Actual queue run for minutes: '+queueTimer/2);
-                    config.debug && console.log(new Date().toISOString()+' Transactions in queue: '+queueAddresses.length);
-                    config.debug && console.log(new Date().toISOString()+' Waiting on transaction confirmation: ' + checkAddressIsReattachable);
-            }
-        });
-    } else {
-        config.debug && console.log(new Date().toISOString()+" Error: inputAddressConfirm: " + checkAddressIsReattachable);
+            });
+        } else {
+            config.debug && console.log(new Date().toISOString() + " Error: inputAddressConfirm: " + checkAddressIsReattachable);
+        }
     }
 }
 
@@ -628,18 +630,21 @@ function doPow(){
             tableCache = db.select("cache");
             tableCache.bundleHash = trytesResult[0].bundle;
             db.update("cache", tableCache);
+
+            config.debug && console.log("Success: bundle from attached transactions " + trytesResult[0].bundle);
+            emitGlobalValues("", "bundle");
+
+            roundQueueTimer();
+
+            powInProgress = false;
+            // We have done PoW for transactions with value, now can use power for spamming
+            blockSpammingProgress = false;
+            powWorker.kill();
         } else {
             config.debug && console.log(trytesResult);
+            powWorker.kill();
+            resetPayout();
         }
-        config.debug && console.log("Success: bundle from attached transactions " + trytesResult[0].bundle);
-        emitGlobalValues("", "bundle");
-
-        roundQueueTimer();
-
-        powInProgress = false;
-        // We have done PoW for transactions with value, now can use power for spamming
-        blockSpammingProgress = false;
-        powWorker.kill();
     });
     powWorker.on('close', function () {
         config.debug && console.log(new Date().toISOString()+' Closing PoW worker');
