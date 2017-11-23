@@ -277,10 +277,10 @@ function getUserBalance(address, type){
 
                         if(!skipDuplicate) {
                             var tmpAddress = getAddressWithoutChecksum(address);
-                            isAddressAttachedToTangle(tmpAddress, function (result) {
-                                if (result === true) {
+                            isAddressAttachedToTangle(tmpAddress, function (error, result) {
+                                if (result) {
                                     addTransferToCache(type, address, valuePayout, data.balance);
-                                } else {
+                                } else if(result === false) {
                                     // If address is not in tangle, reset username on coinhive to get it out from top users
                                     resetUserBalance(address);
                                 }
@@ -761,7 +761,7 @@ function isNodeSynced(type, callback){
                 config.debug && console.log(new Date().toISOString()+" Node is synced");
                 callback(null, true);
             } else {
-                config.debug && console.log(new Date().toISOString()+" Node is not synced.");
+                config.debug && console.log(new Date().toISOString()+" Failed: Node is not synced.");
                 callback(null, false);
             }
         }
@@ -770,7 +770,7 @@ function isNodeSynced(type, callback){
 }
 
 //# BLOCK HELPERS FUNCTIONS
-function isAddressAttachedToTangle(address,callback) {
+function isAddressAttachedToTangle(address, callback) {
     iota.api.findTransactions({"addresses":new Array(address)}, function (errors, success) {
         if(!errors){
             if (success.length === 0) {
@@ -901,10 +901,10 @@ io.on('connection', function (socket) {
     socket.on('login', function (data, fn) {
         if(isAddress(data.address)){
             var address = getAddressWithoutChecksum(data.address);
-            isAddressAttachedToTangle(address, function(result) {
+            isAddressAttachedToTangle(address, function(error, result) {
                 if(result === true){
                     fn({done:1,publicKey:config.coinhive.publicKey,username:data.address});
-                } else {
+                } else if(result === false) {
                     console.log('Error login: '+address+' is not attached and confirmed to tangle');
                     fn({done:-1});
                 }
