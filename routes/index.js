@@ -517,11 +517,11 @@ function isReattachable(){
 }
 
 function roundQueueTimer(){
-    if(queueTimer > 60){
+    if(queueTimer >= 60){
         queueTimer = 60;
-    } else if(queueTimer > 30){
+    } else if(queueTimer >= 30){
         queueTimer = 30;
-    } else if(queueTimer > 0){
+    } else if(queueTimer >= 0){
         queueTimer = 0;
     }
 }
