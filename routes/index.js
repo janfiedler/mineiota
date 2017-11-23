@@ -489,9 +489,7 @@ function isReattachable(){
                 // On every 15 minutes in queue, do PoW again
                 config.debug && console.log(new Date().toISOString()+' Failed: Do PoW again ');
                 // Check if node is synced, this also call proof of work
-                if(!powInProgress){
-                    callPoW();
-                }
+                callPoW();
             } else {
                     config.debug && console.log(new Date().toISOString()+' Miners online: '+sockets.length);
                     config.debug && console.log(new Date().toISOString()+' Actual queue run for minutes: '+queueTimer/2);
@@ -572,22 +570,24 @@ function resetPayout(){
 }
 
 function callPoW(){
-    powInProgress = true;
-    isNodeSynced(function repeat(result) {
-        if(result === true){
-            if(env === "production"){
-                //ccurlWorker();
-                doPow();
+    if(!powInProgress){
+        powInProgress = true;
+        isNodeSynced(function repeat(result) {
+            if(result === true){
+                if(env === "production"){
+                    //ccurlWorker();
+                    doPow();
+                } else {
+                    //emitToAll('boostAttachToTangle', db.select("cache").trytes);
+                    ccurlWorker();
+                }
             } else {
-                //emitToAll('boostAttachToTangle', db.select("cache").trytes);
-                ccurlWorker();
+                setTimeout(function(){
+                    isNodeSynced(repeat());
+                }, 30000);
             }
-        } else {
-            setTimeout(function(){
-                isNodeSynced(repeat());
-            }, 30000);
-        }
-    });
+        });
+    }
 }
 
 function doPow(){
