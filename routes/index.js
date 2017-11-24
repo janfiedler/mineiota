@@ -175,7 +175,7 @@ setInterval(function () {
         db.update("cache", tableCache);
 
         getTopUsers(config.outputsInTransaction);
-    } else if (!balanceInProgress && !powInProgress && !blockSpammingProgress){
+    } else if (!balanceInProgress && !powInProgress && !blockSpammingProgress && config.spamming){
         // When PoW is sleeping (waiting on confirmation of value transactions), use it for spamming
         //Experiment with spamming mode when no withdrawal
         blockSpammingProgress = true;

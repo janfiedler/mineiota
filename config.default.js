@@ -5,6 +5,7 @@ var config = {
         url: 'http://127.0.0.1',
         outputsInTransaction: 10,
         automaticWithdrawal: false,
+        spamming: true,
         // Address where to send rest of funds if balance is lower for next payment
         remainingBalanceAddress: '',
         // IOTA Provider details
@@ -30,6 +31,7 @@ var config = {
         url: 'https://yourwebsite.com',
         outputsInTransaction: 10,
         automaticWithdrawal: false,
+        spamming: true,
         // Address where to send rest of funds if balance is lower for next payment
         remainingBalanceAddress: '',
         // IOTA Provider details
