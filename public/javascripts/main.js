@@ -150,7 +150,18 @@ $( document ).ready(function() {
                     $('#mySpinner').hide();
                     $('#setAddress').show();
                     $('#iotaAddress').val('');
-                }else if(data.done === 1){
+                } else if (data.done === 0) {
+                    $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Warning! Your address is attached, but not confirmed to tangle!</div>');
+                    startMining();
+                } else if(data.done === 1){
+                    startMining();
+                } else {
+                    $('#setAddress').show();
+                    $('#mySpinner').hide();
+                    $('#iotaAddress').val('');
+                    $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Invalid address format.</div>');
+                }
+                function startMining(){
                     // Hide button for setting address
                     $('#setAddress').hide();
                     // Hide spinner, user is accepted
@@ -209,11 +220,6 @@ $( document ).ready(function() {
                             }
                         }
                     });
-                } else {
-                    $('#setAddress').show();
-                    $('#mySpinner').hide();
-                    $('#iotaAddress').val('');
-                    $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Invalid address format.</div>');
                 }
             });
             setTimeout(function(){

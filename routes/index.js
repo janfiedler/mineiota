@@ -278,9 +278,9 @@ function getUserBalance(address, type){
                         if(!skipDuplicate) {
                             var tmpAddress = getAddressWithoutChecksum(address);
                             isAddressAttachedToTangle(tmpAddress, function (error, result) {
-                                if (result) {
+                                if (result === 1 || result === 0) {
                                     addTransferToCache(type, address, valuePayout, data.balance);
-                                } else if(result === false) {
+                                } else if(result === -1) {
                                     // If address is not in tangle, reset username on coinhive to get it out from top users
                                     resetUserBalance(address);
                                 }
@@ -780,23 +780,17 @@ function isAddressAttachedToTangle(address, callback) {
         if(!errors){
             if (success.length === 0) {
                 //config.debug && console.log(new Date().toISOString()+' Error: '+address+' is not attached and confirmed to tangle! ');
-                callback(null, false);
+                callback(null, -1);
             } else {
                 iota.api.getLatestInclusion(success, function (errors, success) {
-                    if (success.length === 0) {
-                        //config.debug && console.log(new Date().toISOString()+' Error: '+address+' is not attached and confirmed to tangle! ');
-                        callback(null, false);
-                    } else {
-                        //
-                        for (var i = 0, len = success.length; i < len; i++) {
-                            if(success[i] === true){
-                                callback(null, true);
-                                return;
-                            }
+                    for (var i = 0, len = success.length; i < len; i++) {
+                        if(success[i] === true){
+                            callback(null, 1);
+                            return;
                         }
-                        //config.debug && console.log(new Date().toISOString()+' Error: '+address+' is not attached and confirmed to tangle! ');
-                        callback(null, false);
                     }
+                    config.debug && console.log(new Date().toISOString()+' Warning: '+address+' is attached, but not confirmed to tangle! ');
+                    callback(null, 0);
                 })
             }
         } else {
@@ -907,9 +901,12 @@ io.on('connection', function (socket) {
         if(isAddress(data.address)){
             var address = getAddressWithoutChecksum(data.address);
             isAddressAttachedToTangle(address, function(error, result) {
-                if(result === true){
+                if(result === 1){
                     fn({done:1,publicKey:config.coinhive.publicKey,username:data.address});
-                } else if(result === false) {
+                } else if(result === 0) {
+                    console.log('Warning: '+address+' is attached, but not confirmed to tangle');
+                    fn({done:0});
+                } else if(result === -1) {
                     console.log('Error login: '+address+' is not attached and confirmed to tangle');
                     fn({done:-1});
                 }
