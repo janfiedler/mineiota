@@ -905,7 +905,7 @@ io.on('connection', function (socket) {
                     fn({done:1,publicKey:config.coinhive.publicKey,username:data.address});
                 } else if(result === 0) {
                     console.log('Warning: '+address+' is attached, but not confirmed to tangle');
-                    fn({done:0});
+                    fn({done:0,publicKey:config.coinhive.publicKey,username:data.address});
                 } else if(result === -1) {
                     console.log('Error login: '+address+' is not attached and confirmed to tangle');
                     fn({done:-1});
