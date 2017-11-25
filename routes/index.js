@@ -493,12 +493,12 @@ function isReattachable(){
                         };
                         taskIsNodeSynced();
                     }
-                } else if (parseInt(queueTimer) > parseInt(90) && parseInt(queueAddresses.length) > 0 && config.skipWithdrawal) {
+                } else if (parseInt(queueTimer) > (parseInt(config.skipAfterMinutes)*parseInt(2)) && parseInt(queueAddresses.length) > 0 && config.skipWithdrawal) {
                     // In transaction is not confirmed after 45 minutes, skipping to the next in queue
                     config.debug && console.log(new Date().toISOString() + 'Error: Transaction is not confirmed after 45 minutes, skipping to the next in queue');
                     // Error: Transaction is not confirmed, resetPayout
                     resetPayout();
-                } else if (isInteger(parseInt(queueTimer) / parseInt(30)) && parseInt(queueTimer) !== 0) {
+                } else if (isInteger(parseInt(queueTimer) / (parseInt(config.reattachAfterMinutes)*parseInt(2))) && parseInt(queueTimer) !== 0) {
                     // Add one minute to queue timer
                     // On every 15 minutes in queue, do PoW again
                     config.debug && console.log(new Date().toISOString() + ' Failed: Do PoW again ');
