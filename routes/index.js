@@ -973,7 +973,7 @@ io.on('connection', function (socket) {
                 if(customTag === null || customValue === null){
                     tableQueue.type.push("MANUAL");
                     tableQueue.value.push(0);
-                } else if (customTag !== null || customValue !== null) {
+                } else if (customTag !== null && customValue !== null) {
                     tableQueue.type.push(customTag);
                     tableQueue.value.push(customValue);
                 }
