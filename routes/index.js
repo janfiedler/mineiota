@@ -204,8 +204,9 @@ function getUserForPayout(){
         countUsersForPayout++;
         // Remove socket id and socket for waiting list (using for get position in queue)
         tableQueue = db.select("queue");
-        var requestType = tableQueue.type.shift();
         var socketId = tableQueue.ids.shift();
+        var requestType = tableQueue.type.shift();
+        var requestValue = tableQueue.value.shift();
 
         // Remove used address from array (get right position in queue)
         var userName = tableQueue.addresses.shift();
@@ -225,7 +226,7 @@ function getUserForPayout(){
 
         config.debug && console.log(new Date().toISOString() + " Withdrawal in progress for " + userName);
 
-        getUserBalance(userName, requestType);
+        getUserBalance(userName, requestType, requestValue);
     }
     else if(db.select("cache").withdrawalInProgress && queueAddresses.length === 0 && countUsersForPayout < config.outputsInTransaction && config.automaticWithdrawal){
         var outputsTransactionLeft = parseInt(config.outputsInTransaction) - parseInt(countUsersForPayout);
@@ -247,7 +248,7 @@ function getUserForPayout(){
         }
     }
 }
-function getUserBalance(address, type){
+function getUserBalance(address, type, customValue){
     request.get({url: "https://api.coinhive.com/user/balance", qs: {"secret": config.coinhive.privateKey, "name": address}}, function (error, response, body) {
         if (!error && response.statusCode === 200) {
             var data = JSON.parse(body);
@@ -258,7 +259,11 @@ function getUserBalance(address, type){
                 getUserForPayout();
             }  else {
                 // Temp payout for skip amount when is not enough balance
-                var tempPayout = Math.floor(data.balance*hashIotaRatio);
+                if(customValue === 0){
+                    var tempPayout = Math.floor(data.balance*hashIotaRatio);
+                } else {
+                    var tempPayout = Math.round(customValue);
+                }
                 //Check if we have balance for transfer
                 if((parseInt(cacheTotalValue)+parseInt(tempPayout)) < cacheBalance){
                     var valuePayout = tempPayout;
@@ -280,7 +285,12 @@ function getUserBalance(address, type){
                             var tmpAddress = getAddressWithoutChecksum(address);
                             isAddressAttachedToTangle(tmpAddress, function (error, result) {
                                 if (result === 1 || result === 0) {
-                                    addTransferToCache(type, address, valuePayout, data.balance);
+                                    if(customValue === 0){
+                                        addTransferToCache(type, address, valuePayout, data.balance);
+                                    } else {
+                                        addTransferToCache(type, address, customValue, Math.floor(parseFloat(customValue/hashIotaRatio)));
+                                    }
+
                                 } else if(result === -1) {
                                     // If address is not in tangle, reset username on coinhive to get it out from top users
                                     resetUserBalance(address);
@@ -317,7 +327,7 @@ function getUserBalance(address, type){
             }
         } else {
             // Repeat
-            getUserBalance(address, type);
+            getUserBalance(address, type, customValue);
         }
     });
 }
@@ -371,6 +381,8 @@ function getTopUsers(count){
                         tableQueue = db.select("queue");
                         // Push type of withdrawal
                         tableQueue.type.push("AUTOMATIC");
+                        // Custom payout request
+                        tableQueue.value.push(0);
                         // Push empty socket id for automatic withdrawal do not need
                         tableQueue.ids.push("");
                         // Push address to array
@@ -947,7 +959,8 @@ io.on('connection', function (socket) {
     //When user with request withdraw
     socket.on('withdraw', function(data, fn) {
         var fullAddress = data.address;
-        var getTag = data.tag;
+        var customTag = data.tag;
+        var customValue = data.value;
         config.debug && console.log("Requesting withdraw for address: " + fullAddress);
         if(isAddress(fullAddress)){
             var queueAddresses = db.select("queue").addresses;
@@ -957,10 +970,12 @@ io.on('connection', function (socket) {
             } else  {
                 tableQueue = db.select("queue");
                 // Push type of withdrawal
-                if(getTag === null){
+                if(customTag === null && customValue === 0){
                     tableQueue.type.push("MANUAL");
+                    tableQueue.value.push(0);
                 } else {
-                    tableQueue.type.push(getTag);
+                    tableQueue.type.push(customTag);
+                    tableQueue.value.push(customValue);
                 }
 
                 // Push socket id to array for get position in queue

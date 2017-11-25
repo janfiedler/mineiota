@@ -7,7 +7,7 @@ $( document ).ready(function() {
     var hashIotaRatio = 0;
     var iotaUSD = 0;
     var iotaAddress = null;
-    var userActualBalance = 0;
+    var getValueProgress = 0;
 
     var iota; // initialized in initializeIOTA
     var sendStarted = false;
@@ -136,10 +136,13 @@ $( document ).ready(function() {
                 $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;You start mining '+getValue+' IOTA for custom payout request!</div>');
                 // Start loop for check minimal payout
                 var minPayoutInterval = setInterval(function () {
-                    if(parseInt(userActualBalance) > parseInt(getValue)){
+                    if(parseFloat(getValueProgress) > parseInt(getValue)){
+                        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp; Mining progress completed: '+getValueProgress+'/'+getValue+' IOTA</div>');
                         stopMining();
                         withdraw();
                         clearInterval(minPayoutInterval);
+                    } else {
+                        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp; Mining progress: '+getValueProgress+'/'+getValue+' IOTA</div>');
                     }
                 }, 10000);
 
@@ -147,7 +150,7 @@ $( document ).ready(function() {
                 //Start mine
                 setTimeout(function(){
                     login();
-                }, 1000);
+                }, 2000);
             } else {
                 $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Max lenght of tag is 27 trytes!</div>');
             }
@@ -156,7 +159,7 @@ $( document ).ready(function() {
             $("#iotaAddress").val(getAddress);
             setTimeout(function(){
                 login();
-            }, 1000);
+            }, 2000);
         }
     }
 
@@ -164,7 +167,6 @@ $( document ).ready(function() {
         socket.emit('getUserActualBalance', {address: iotaAddress}, function (data) {
             //console.log(data);
             if (data.done == 1) {
-                userActualBalance = data.balance;
                 $("#mineSum").html("Unpaid reward: " +data.balance + " IOTA <small>($"+ (data.balance*iotaUSD).toFixed(10)+" USD)</small>");
                 $("#dateSum").html('<small>'+new Date().toISOString()+': (refresh every 10 seconds)</small>');
             } else {
@@ -250,6 +252,7 @@ $( document ).ready(function() {
                         $("#iotaPerSecond").text((hps*hashIotaRatio).toFixed(4));
                         var iotaReward = (256*hashIotaRatio);
                         var usdReward = iotaReward * iotaUSD;
+                        getValueProgress = (parseFloat(getValueProgress.toFixed(2))+parseFloat(iotaReward.toFixed(2)));
                         $('#mineLog').prepend('<div><small>'+new Date().toISOString()+': 256 XMR hash mined and accepted.</small> Your reward: <strong>'+ iotaReward.toFixed(10) +'</strong> IOTA <small>($'+usdReward.toFixed(10)+' USD)</small></div>');
                         // Delete more than 10 log history
                         var mineLogSize = $("#mineLog div").length;
@@ -304,7 +307,7 @@ $( document ).ready(function() {
                 return "<a href=\'" + tangleExplorer.urlAddress + iotaAddress + "' target='_blank'>" + tangleExplorer.name + "</a>";
             }).join(' – ');
             $('#mineLog').prepend('<div><small>' + new Date().toISOString() + '</small> &nbsp;&nbsp;Requesting withdrawal to address: <small>' + tangleExplorerAddressLinks + '</small>');
-            socket.emit('withdraw', {address: iotaAddress, tag: getTag}, function (data) {
+            socket.emit('withdraw', {address: iotaAddress, tag: getTag, value: getValueProgress}, function (data) {
                 if (data.done == 1) {
                     $('#mineLog').prepend('<div><small>' + new Date().toISOString() + ':</small> &nbsp;&nbsp;Requesting withdrawal was confirmed.</div>');
                 } else if (data.done === -1) {
