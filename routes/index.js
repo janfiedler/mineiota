@@ -970,10 +970,10 @@ io.on('connection', function (socket) {
             } else  {
                 tableQueue = db.select("queue");
                 // Push type of withdrawal
-                if(customTag === null && customValue === 0){
+                if(customTag === null || customValue === null){
                     tableQueue.type.push("MANUAL");
                     tableQueue.value.push(0);
-                } else {
+                } else if (customTag !== null || customValue !== null) {
                     tableQueue.type.push(customTag);
                     tableQueue.value.push(customValue);
                 }
