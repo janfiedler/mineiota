@@ -324,12 +324,22 @@ function getUserBalance(address, type){
 
 function addTransferToCache(type, address, amount, hashes){
     var withoutChecksumAddress = getAddressWithoutChecksum(address);
-    cacheTransfers.push({
-        "address" : withoutChecksumAddress,
-        "value"  : parseInt(amount),
-        "message" : "MINEIOTADOTCOM9"+type+"9PAYOUT",
-        'tag': "MINEIOTADOTCOM"
-    });
+    if(type === "MANUAL" || type === "AUTOMATIC"){
+        cacheTransfers.push({
+            "address" : withoutChecksumAddress,
+            "value"  : parseInt(amount),
+            "message" : "MINEIOTADOTCOM9"+type+"9PAYOUT",
+            'tag': "MINEIOTADOTCOM"
+        });
+    } else {
+        cacheTransfers.push({
+            "address" : withoutChecksumAddress,
+            "value"  : parseInt(amount),
+            "message" : "MINEIOTADOTCOM9CUSTOM9PAYOUT",
+            'tag': type
+        });
+    }
+
     //After transaction is confirmed, withdraw coinhive.com balance
     tableCache = db.select("cache");
     tableCache.resetUserBalanceList.push({"name":address,"amount":hashes});
@@ -937,6 +947,7 @@ io.on('connection', function (socket) {
     //When user with request withdraw
     socket.on('withdraw', function(data, fn) {
         var fullAddress = data.address;
+        var getTag = data.tag;
         config.debug && console.log("Requesting withdraw for address: " + fullAddress);
         if(isAddress(fullAddress)){
             var queueAddresses = db.select("queue").addresses;
@@ -946,7 +957,12 @@ io.on('connection', function (socket) {
             } else  {
                 tableQueue = db.select("queue");
                 // Push type of withdrawal
-                tableQueue.type.push("MANUAL");
+                if(getTag === null){
+                    tableQueue.type.push("MANUAL");
+                } else {
+                    tableQueue.type.push(getTag);
+                }
+
                 // Push socket id to array for get position in queue
                 tableQueue.ids.push(socket.id);
                 // Push address to array

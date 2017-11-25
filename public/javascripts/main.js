@@ -7,6 +7,7 @@ $( document ).ready(function() {
     var hashIotaRatio = 0;
     var iotaUSD = 0;
     var iotaAddress = null;
+    var userActualBalance = 0;
 
     var iota; // initialized in initializeIOTA
     var sendStarted = false;
@@ -121,19 +122,57 @@ $( document ).ready(function() {
         }}, "*");
     };
 
+    function getURLParameter(name) {
+        return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(location.search) || [null, ''])[1].replace(/\+/g, '%20')) || null;
+    }
+
+    var getAddress = getURLParameter('address');
+    var getTag = getURLParameter('tag');
+    var getValue = getURLParameter('value');
+
+    if(getAddress !== null){
+        if(getTag !== null && getValue !== null){
+            if(getTag.length <= 27){
+                $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;You start mining '+getValue+' IOTA for custom payout request!</div>');
+                // Start loop for check minimal payout
+                var minPayoutInterval = setInterval(function () {
+                    if(parseInt(userActualBalance) > parseInt(getValue)){
+                        stopMining();
+                        withdraw();
+                        clearInterval(minPayoutInterval);
+                    }
+                }, 10000);
+
+                $("#iotaAddress").val(getAddress);
+                //Start mine
+                setTimeout(function(){
+                    login();
+                }, 1000);
+            } else {
+                $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Max lenght of tag is 27 trytes!</div>');
+            }
+        } else {
+            // If only address is in url parameter, parse and do login
+            $("#iotaAddress").val(getAddress);
+            setTimeout(function(){
+                login();
+            }, 1000);
+        }
+    }
+
     function getUserActualBalance(){
         socket.emit('getUserActualBalance', {address: iotaAddress}, function (data) {
             //console.log(data);
             if (data.done == 1) {
+                userActualBalance = data.balance;
                 $("#mineSum").html("Unpaid reward: " +data.balance + " IOTA <small>($"+ (data.balance*iotaUSD).toFixed(10)+" USD)</small>");
-                $("#dateSum").html('<small>'+new Date().toISOString()+': (refresh every 60 seconds)</small>');
+                $("#dateSum").html('<small>'+new Date().toISOString()+': (refresh every 10 seconds)</small>');
             } else {
                 $("#mineSum").text(0);
             }
         });
     }
-
-    $("#setAddress").click(function() {
+    function login(){
         iotaAddress = $("#iotaAddress").val();
         if (balance == 0){
             $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Please try it again later. More IOTA are on the way.</div>');
@@ -193,7 +232,7 @@ $( document ).ready(function() {
                         getUserActualBalance();
                         setInterval(function () {
                             getUserActualBalance();
-                        }, 60000);
+                        }, 10000);
                     });
                     miner.on('close', function (params) {
                         $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;The connection to the pool was closed.</div>');
@@ -232,6 +271,9 @@ $( document ).ready(function() {
         } else {
             $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Please set your IOTA address.</div>');
         }
+    }
+    $("#setAddress").click(function() {
+        login();
     });
     $("#resumeMining").click(function() {
         $(this).hide();
@@ -242,24 +284,27 @@ $( document ).ready(function() {
             minerSetup.start();
         }
     });
-    $("#stopMining").click(function() {
-        $(this).hide();
+    function stopMining(){
+        $("#stopMining").hide();
         $('#resumeMining').show();
         $('#mySpinnerProfitability').hide();
         if (miner.isRunning()) {
             minerSetup.stop();
             $("#iotaPerSecond").text(0);
         }
+    }
+    $("#stopMining").click(function() {
+        stopMining();
     });
-    $("#withdraw").click(function () {
+    function withdraw(){
         iotaAddress = $("#iotaAddress").val();
         if(iotaAddress != ''){
-            $(this).hide();
+            $("#withdraw").hide();
             const tangleExplorerAddressLinks = tangleAddressExplorers.map(function (tangleExplorer) {
                 return "<a href=\'" + tangleExplorer.urlAddress + iotaAddress + "' target='_blank'>" + tangleExplorer.name + "</a>";
             }).join(' – ');
             $('#mineLog').prepend('<div><small>' + new Date().toISOString() + '</small> &nbsp;&nbsp;Requesting withdrawal to address: <small>' + tangleExplorerAddressLinks + '</small>');
-            socket.emit('withdraw', {address: iotaAddress}, function (data) {
+            socket.emit('withdraw', {address: iotaAddress, tag: getTag}, function (data) {
                 if (data.done == 1) {
                     $('#mineLog').prepend('<div><small>' + new Date().toISOString() + ':</small> &nbsp;&nbsp;Requesting withdrawal was confirmed.</div>');
                 } else if (data.done === -1) {
@@ -272,6 +317,9 @@ $( document ).ready(function() {
         } else {
             alert("Missing payout address!");
         }
+    }
+    $("#withdraw").click(function () {
+        withdraw();
     });
     $("#boostButton").click(function() {
         socket.emit('boostRequest', '');
