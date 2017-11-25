@@ -151,7 +151,7 @@ $( document ).ready(function() {
                     $('#setAddress').show();
                     $('#iotaAddress').val('');
                 } else if (data.done === 0) {
-                    $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Warning! Your address is attached, but not confirmed to tangle!</div>');
+                    console.log("Warning! Your address is attached, but not confirmed to tangle!");
                     startMining();
                 } else if(data.done === 1){
                     startMining();
