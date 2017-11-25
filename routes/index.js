@@ -30,6 +30,7 @@ var cacheTransfers = [];
 var cacheTotalValue = 0;
 // Count loops in queue
 var queueTimer = 0;
+var roundedQueueTimer = 0;
 // init table variable for file database
 var tableKeyIndex = db.select("keyIndex");
 var tableCache;
@@ -492,7 +493,7 @@ function isReattachable(){
                         };
                         taskIsNodeSynced();
                     }
-                } else if (parseInt(queueTimer) > parseInt(90) && parseInt(queueAddresses.length) > 0) {
+                } else if (parseInt(queueTimer) > parseInt(90) && parseInt(queueAddresses.length) > 0 && config.skipWithdrawal) {
                     // In transaction is not confirmed after 45 minutes, skipping to the next in queue
                     config.debug && console.log(new Date().toISOString() + 'Error: Transaction is not confirmed after 45 minutes, skipping to the next in queue');
                     // Error: Transaction is not confirmed, resetPayout
@@ -501,6 +502,8 @@ function isReattachable(){
                     // Add one minute to queue timer
                     // On every 15 minutes in queue, do PoW again
                     config.debug && console.log(new Date().toISOString() + ' Failed: Do PoW again ');
+                    // Set rounded queueTimer for round after Proof of Work
+                    roundedQueueTimer = queueTimer;
                     // Check if node is synced, this also call proof of work
                     callPoW();
                 } else {
@@ -517,12 +520,8 @@ function isReattachable(){
 }
 
 function roundQueueTimer(){
-    if(queueTimer >= 60 && queueTimer < 90){
-        queueTimer = 60;
-    } else if(queueTimer >= 30){
-        queueTimer = 30;
-    } else if(queueTimer >= 0){
-        queueTimer = 0;
+    if(queueTimer >= roundedQueueTimer){
+        queueTimer = roundedQueueTimer;
     }
 }
 // Reset total on coinhive.com on request
