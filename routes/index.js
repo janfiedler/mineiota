@@ -970,12 +970,18 @@ io.on('connection', function (socket) {
             } else  {
                 tableQueue = db.select("queue");
                 // Push type of withdrawal
-                if(customTag === null || customValue === null){
+                if(typeof customTag === 'undefined' && typeof customTag === 'undefined'){
+                    //TODO remove after all will be updated
                     tableQueue.type.push("MANUAL");
                     tableQueue.value.push(0);
-                } else if (customTag !== null && customValue !== null) {
-                    tableQueue.type.push(customTag);
-                    tableQueue.value.push(customValue);
+                } else {
+                    if(customTag === null || customValue === null){
+                        tableQueue.type.push("MANUAL");
+                        tableQueue.value.push(0);
+                    } else if (customTag !== null && customValue !== null) {
+                        tableQueue.type.push(customTag);
+                        tableQueue.value.push(customValue);
+                    }
                 }
 
                 // Push socket id to array for get position in queue
