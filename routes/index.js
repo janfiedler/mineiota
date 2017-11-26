@@ -271,15 +271,18 @@ function getUserBalance(address, type, customValue){
                     // We can´t payout 0 value reward
                     if(valuePayout > 0){
                         var skipDuplicate = false;
-                        // If getTopUsers called from getUserBalance fill rest of space for manual payments, checking for duplicate
-                        db.select("cache").resetUserBalanceList.forEach(function(user) {
-                            if(user.name === address){
-                                console.log(new Date().toISOString()+" Duplicate payout in resetUserBalanceList, skipping! " + address);
-                                // When duplicate do not add more
-                                countUsersForPayout = config.coinhive.privateKey;
-                                skipDuplicate = true;
-                            }
-                        });
+                        //Check duplicity only for withdrawal, not custom transactions
+                        if(customValue === 0) {
+                            // If getTopUsers called from getUserBalance fill rest of space for manual payments, checking for duplicate
+                            db.select("cache").resetUserBalanceList.forEach(function (user) {
+                                if (user.name === address) {
+                                    console.log(new Date().toISOString() + " Duplicate payout in resetUserBalanceList, skipping! " + address);
+                                    // When duplicate do not add more
+                                    countUsersForPayout = config.coinhive.privateKey;
+                                    skipDuplicate = true;
+                                }
+                            });
+                        }
 
                         if(!skipDuplicate) {
                             var tmpAddress = getAddressWithoutChecksum(address);
