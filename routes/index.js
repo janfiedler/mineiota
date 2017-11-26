@@ -277,8 +277,8 @@ function getUserBalance(address, type, customValue){
                             db.select("cache").resetUserBalanceList.forEach(function (user) {
                                 if (user.name === address) {
                                     console.log(new Date().toISOString() + " Duplicate payout in resetUserBalanceList, skipping! " + address);
-                                    // When duplicate do not add more
-                                    countUsersForPayout = config.coinhive.privateKey;
+                                    // When duplicate do not add more, skip this user and continue
+                                    countUsersForPayout = parseInt(countUsersForPayout) - 1;
                                     skipDuplicate = true;
                                 }
                             });
@@ -374,8 +374,8 @@ function getTopUsers(count){
                         db.select("cache").resetUserBalanceList.forEach(function(user) {
                             if(user.name === address){
                                 console.log(new Date().toISOString()+" Duplicate payout in resetUserBalanceList, skipping! " + address);
-                                // When duplicate do not add more
-                                countUsersForPayout = config.coinhive.privateKey;
+                                // When duplicate do not add more, skip this user and continue
+                                countUsersForPayout = parseInt(countUsersForPayout) - 1;
                                 skipDuplicate = true;
                             }
                         });
