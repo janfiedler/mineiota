@@ -965,7 +965,7 @@ io.on('connection', function (socket) {
         if(isAddress(fullAddress)){
             var queueAddresses = db.select("queue").addresses;
             // Check if withdrawal request inst already in queue
-            if(queueAddresses.indexOf(fullAddress) >= 0){
+            if(queueAddresses.indexOf(fullAddress) >= 0 && customTag === null && customValue === null){
                 fn({done:-1,position:(parseInt(queueAddresses.indexOf(fullAddress))+parseInt(1))});
             } else  {
                 tableQueue = db.select("queue");
