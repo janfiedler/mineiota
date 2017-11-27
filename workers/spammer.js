@@ -29,7 +29,7 @@ var localAttachToTangle = function(trunkTransaction, branchTransaction, minWeigh
 
 iota.api.attachToTangle = localAttachToTangle;
 
-var depth = 3;
+var depth = 12;
 var minWeightMagnitude = 14;
 
 function generateSeed() {
