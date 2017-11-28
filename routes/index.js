@@ -291,10 +291,11 @@ function getUserBalance(address, type, customValue){
                         if(!skipDuplicate) {
                             var tmpAddress = getAddressWithoutChecksum(address);
                             isAddressAttachedToTangle(tmpAddress, function (error, result) {
-                                if(error){
-                                    // Repeat
+                                console.log(new Date().toISOString() + " Begin: isAddressAttachedToTangle");
+                                if(error !== null){
                                     console.log(new Date().toISOString() + " Error: isAddressAttachedToTangle!");
                                     console.log(error);
+                                    // Repeat
                                     getUserBalance(address, type, customValue);
                                 } else {
                                     if (result === 1 || result === 0) {
