@@ -291,20 +291,27 @@ function getUserBalance(address, type, customValue){
                         if(!skipDuplicate) {
                             var tmpAddress = getAddressWithoutChecksum(address);
                             isAddressAttachedToTangle(tmpAddress, function (error, result) {
-                                if (result === 1 || result === 0) {
-                                    console.log(new Date().toISOString() + " isAddressAttachedToTangle result: "+ result + " customValue: " + customValue);
-                                    if(customValue === 0){
-                                        addTransferToCache(type, address, valuePayout, data.balance);
-                                    } else {
-                                        addTransferToCache(type, address, customValue, Math.floor(parseFloat(customValue/hashIotaRatio)));
-                                    }
+                                if(error){
+                                    // Repeat
+                                    console.log(new Date().toISOString() + " Error: isAddressAttachedToTangle!");
+                                    console.log(error);
+                                    getUserBalance(address, type, customValue);
+                                } else {
+                                    if (result === 1 || result === 0) {
+                                        console.log(new Date().toISOString() + " isAddressAttachedToTangle result: " + result + " customValue: " + customValue);
+                                        if (customValue === 0) {
+                                            addTransferToCache(type, address, valuePayout, data.balance);
+                                        } else {
+                                            addTransferToCache(type, address, customValue, Math.floor(parseFloat(customValue / hashIotaRatio)));
+                                        }
 
-                                } else if(result === -1) {
-                                    // If address is not in tangle, reset username on coinhive to get it out from top users
-                                    resetUserBalance(address);
+                                    } else if (result === -1) {
+                                        // If address is not in tangle, reset username on coinhive to get it out from top users
+                                        resetUserBalance(address);
+                                    }
+                                    // Go to next
+                                    getUserForPayout();
                                 }
-                                // Go to next
-                                getUserForPayout();
                             });
                         } else {
                             // Go to next
