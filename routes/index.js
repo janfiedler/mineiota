@@ -251,14 +251,16 @@ function getUserForPayout(){
 function getUserBalance(address, type, customValue){
     request.get({url: "https://api.coinhive.com/user/balance", qs: {"secret": config.coinhive.privateKey, "name": address}}, function (error, response, body) {
         if (!error && response.statusCode === 200) {
+            console.log(new Date().toISOString()+" countUsersForPayout: " + countUsersForPayout);
             var data = JSON.parse(body);
             if(data.error){
-                console.log(new Date().toISOString()+" Unknown address!");
+                console.log(new Date().toISOString()+" Error: Unknown address!");
                 // Skip this user and continue
                 countUsersForPayout = parseInt(countUsersForPayout) - 1;
                 getUserForPayout();
             }  else {
                 // Temp payout for skip amount when is not enough balance
+                console.log(new Date().toISOString()+" customValue: " + customValue);
                 if(customValue === 0){
                     var tempPayout = Math.floor(data.balance*hashIotaRatio);
                 } else {
@@ -276,18 +278,21 @@ function getUserBalance(address, type, customValue){
                             // If getTopUsers called from getUserBalance fill rest of space for manual payments, checking for duplicate
                             db.select("cache").resetUserBalanceList.forEach(function (user) {
                                 if (user.name === address) {
-                                    console.log(new Date().toISOString() + " Duplicate payout in resetUserBalanceList, skipping! " + address);
+                                    console.log(new Date().toISOString() + " Error: Duplicate payout in resetUserBalanceList, skipping! " + address);
                                     // When duplicate do not add more, skip this user and continue
                                     countUsersForPayout = parseInt(countUsersForPayout) - 1;
                                     skipDuplicate = true;
                                 }
                             });
+                        } else {
+                            console.log(new Date().toISOString() + " Custom payout, skipping check duplicates!");
                         }
 
                         if(!skipDuplicate) {
                             var tmpAddress = getAddressWithoutChecksum(address);
                             isAddressAttachedToTangle(tmpAddress, function (error, result) {
                                 if (result === 1 || result === 0) {
+                                    console.log(new Date().toISOString() + " isAddressAttachedToTangle result: "+ result + " customValue: " + customValue);
                                     if(customValue === 0){
                                         addTransferToCache(type, address, valuePayout, data.balance);
                                     } else {
