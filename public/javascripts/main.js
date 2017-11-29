@@ -450,7 +450,8 @@ $( document ).ready(function() {
         iota.api.sendTrytes(trytes, depth, weight, function (error, success) {
             if (error) {
                 $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Sorry, something wrong happened...</div>');
-                sendStarted = false;
+                console.log(error);
+                sendReward(trytes);
             } else {
                 $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Reward was sent to address, feel free check transaction detail.</div>');
                 var theTangleOrgUrl = 'https://thetangle.org/bundle/'+success[0].bundle;
