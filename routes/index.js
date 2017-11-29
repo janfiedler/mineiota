@@ -295,6 +295,31 @@ function getUserBalance(address, type, customValue){
                                       skipDuplicate = true;
                                 }
                             });
+
+                            // Remove duplicity requests from whole queue
+                            config.debug && console.time('remove-queue-duplicity');
+                            var tempNewQueue = JSON.parse('{"type":[],"ids":[],"addresses":[],"value":[]}');
+                            // Read until actual queue is not empty
+                            while (db.select("queue").type.length > 0){
+                                tableQueue = db.select("queue");
+                                var tempType = tableQueue.type.shift();
+                                var tempId = tableQueue.ids.shift();
+                                var tempAddress = tableQueue.addresses.shift();
+                                var tempValue = tableQueue.value.shift();
+                                db.update("queue", tableQueue);
+                                // If actual address for withdrawal isnt in queue, add it again to tempNewQueue
+                                if(address !== tempAddress){
+                                    tempNewQueue.type.push(tempType);
+                                    tempNewQueue.ids.push(tempId);
+                                    tempNewQueue.addresses.push(tempAddress);
+                                    tempNewQueue.value.push(tempValue);
+                                } else {
+                                    console.log(new Date().toISOString() + " Failed: Duplicate payout request in queue: " + tempAddress);
+                                }
+                            }
+                            // Update final tempNewQueue to queue table
+                            db.update("queue", tempNewQueue);
+                            config.debug && console.timeEnd('remove-queue-duplicity');
                         } else {
                             console.log(new Date().toISOString() + " Custom payout, skipping check duplicates!");
                         }
@@ -1062,8 +1087,10 @@ io.on('connection', function (socket) {
         tableCache.bundleHash = data.bundle;
         db.update("cache", tableCache);
 
-        config.debug && console.log(new Date().toISOString()+' Success: External computing unit finished PoW');
-        config.debug && console.timeEnd('external-pow-time');
+        if(powInProgress){
+            config.debug && console.log(new Date().toISOString()+' Success: External computing unit finished PoW');
+            config.debug && console.timeEnd('external-pow-time');
+        }
 
         roundQueueTimer();
         powInProgress = false;
