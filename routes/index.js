@@ -297,7 +297,6 @@ function getUserBalance(address, type, customValue){
                             });
 
                             // Remove duplicity requests from whole queue
-                            config.debug && console.time('remove-queue-duplicity');
                             var tempNewQueue = JSON.parse('{"type":[],"ids":[],"addresses":[],"value":[]}');
                             // Read until actual queue is not empty
                             while (db.select("queue").type.length > 0){
@@ -319,7 +318,6 @@ function getUserBalance(address, type, customValue){
                             }
                             // Update final tempNewQueue to queue table
                             db.update("queue", tempNewQueue);
-                            config.debug && console.timeEnd('remove-queue-duplicity');
                         } else {
                             console.log(new Date().toISOString() + " Custom payout, skipping check duplicates!");
                         }
