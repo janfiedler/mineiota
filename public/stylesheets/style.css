@@ -129,7 +129,7 @@ td {
   margin-left: 15px;
 }
 
-#mineStats, #mySpinner, #resumeMining{
+#mineStats, #mySpinner, #resumeMining, #boostZone{
   display: none;
 }
 

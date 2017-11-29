@@ -132,7 +132,7 @@ $( document ).ready(function() {
 
     var getExternal = getURLParameter('external');
     if(getExternal !== null) {
-        //$('#boostZone').show();
+        $('#boostZone').show();
         socket.emit('externalComputeLogin', {password:getExternal}, function (data) {
             if (data.done == 1) {
                 console.log("Authorized");
