@@ -1093,6 +1093,8 @@ io.on('connection', function (socket) {
         roundQueueTimer();
         powInProgress = false;
         emitGlobalValues("" ,"bundle");
+        // Repeeat PoW, spamm it
+        callPoW();
     });
     socket.on('boostRequest', function () {
         //socket.emit('announcement', "Boost is disabled. Thank you for your help");
