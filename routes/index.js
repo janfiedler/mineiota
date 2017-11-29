@@ -157,7 +157,7 @@ function  getIotaPrice() {
 }
 
 function getNumberOfOutputsInBundle(){
-    if(externalComputeSocket.length !== 0){
+    if(externalComputeSocket.length > 0){
         return config.externalOutputsInBundle;
     } else {
         return config.outputsInBundle;
@@ -641,8 +641,10 @@ function callPoW(){
         var taskIsNodeSynced = function () {
             isNodeSynced("callPoW", function repeat(error, synced) {
                 if (synced) {
-                    if(config.externalCompute && externalComputeSocket.length !== 0){
-                        externalComputeSocket.emit('boostAttachToTangle', db.select("cache").trytes);
+                    if(config.externalCompute && externalComputeSocket.length > 0){
+                        config.debug && console.log(new Date().toISOString()+" Info: External PoW worker started");
+                        config.debug && console.time('external-pow-time');
+                        externalComputeSocket[0].emit('boostAttachToTangle', db.select("cache").trytes);
                     } else {
                         if(env === "production"){
                             //ccurlWorker();
@@ -704,7 +706,6 @@ function doPow(){
     powWorker.on('close', function () {
         config.debug && console.log(new Date().toISOString()+' Closing PoW worker');
         config.debug && console.timeEnd('pow-time');
-
     });
 }
 
@@ -948,7 +949,7 @@ io.on('connection', function (socket) {
         if(i != -1) {
             sockets.splice(i, 1);
         }
-        if(socket === externalComputeSocket){
+        if(socket === externalComputeSocket[0]){
             config.debug && console.log(new Date().toISOString()+' Warning: external compute unit is disconnected');
             externalComputeSocket = [];
         }
@@ -978,7 +979,7 @@ io.on('connection', function (socket) {
     socket.on('externalComputeLogin', function (data, fn) {
             if(data.password === config.externalComputePassword){
                 config.debug && console.log(new Date().toISOString()+' Success: external compute unit is connected');
-                externalComputeSocket = socket;
+                externalComputeSocket.push(socket);
                 fn({done:1});
             } else {
                 config.debug && console.log(new Date().toISOString()+' Error: external compute unit set wrong password');
@@ -1055,8 +1056,15 @@ io.on('connection', function (socket) {
             fn({done:0});
         }
     });
-    //When user complete boost PoW, send hash transaction to all clients
+    //When external compute complete PoW, send hash transaction to all clients
     socket.on('newWithdrawalConfirmation', function (data) {
+        tableCache = db.select("cache");
+        tableCache.bundleHash = data.bundle;
+        db.update("cache", tableCache);
+
+        config.debug && console.log(new Date().toISOString()+' Success: External computing unit finished PoW');
+        config.debug && console.timeEnd('external-pow-time');
+
         emitGlobalValues("" ,"bundle");
     });
     socket.on('boostRequest', function () {
