@@ -71,6 +71,18 @@ html {
   top: -180px;
 }
 
+.th-about {
+    color:#fff;;
+    background: #1b1e24;
+    border-bottom: 4px solid #9ea7af;
+    font-size:23px;
+    font-weight: 100;
+    padding: 24px;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+    vertical-align:middle;
+    text-align: center;
+}
+
 .th-balance {
   border-top-left-radius: 25px;
   border-top-right-radius: 25px;

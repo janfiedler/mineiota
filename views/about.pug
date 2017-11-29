@@ -9,11 +9,19 @@ block content
                 | IOTA
             p.headerDesc IOTA Faucet - Get IOTA through mining Monero
         section
-            table.table-fill
+            table.table-faucet
                 thead
                     tr
-                        th.rank__title #ABOUT
+                        th.th-about #ABOUT
                 tbody#simpleList
+                    tr
+                        td
+                            div.row
+                                div.col-md-1
+                                    | 0.1.7
+                                div.col-md-11
+                                    ul.warningList
+                                        li Remove multiple requests from queue for actual withdrawal of user.
                     tr
                         td
                             div.row
