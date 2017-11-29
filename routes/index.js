@@ -1094,7 +1094,41 @@ io.on('connection', function (socket) {
         powInProgress = false;
         emitGlobalValues("" ,"bundle");
         // Repeeat PoW, spamm it
-        callPoW();
+        var checkAddressIsReattachable = db.select("cache").isReattachable;
+        if (checkAddressIsReattachable !== null) {
+            iota.api.isReattachable(checkAddressIsReattachable, function (errors, Bool) {
+                // If false, transaction was confirmed
+                if (!Bool) {
+                    //Withdraw user balance only if node is synced (node is only), transactions can be pending and look as confirmed when node is offline
+                    if (!balanceInProgress) {
+                        var taskIsNodeSynced = function () {
+                            isNodeSynced("isReattachable", function repeat(error, synced) {
+                                if (synced) {
+                                    // We are done, next in queue can go
+                                    config.debug && console.log(new Date().toISOString() + " Success: Transaction is confirmed: " + checkAddressIsReattachable);
+                                    db.select("cache").resetUserBalanceList.forEach(function (user) {
+                                        withdrawUserBalance(user.name, user.amount);
+                                    });
+                                    // We are done, unset the cache values
+                                    resetPayout();
+                                    // Get and emit new balance after transaction confirmation
+                                    getRates("balance");
+                                } else {
+                                    setTimeout(function () {
+                                        taskIsNodeSynced();
+                                    }, 30000);
+                                }
+                            });
+                        };
+                        taskIsNodeSynced();
+                    }
+                } else {
+                    callPoW();
+                }
+            });
+        } else {
+            config.debug && console.log(new Date().toISOString() + " Error: inputAddressConfirm: " + checkAddressIsReattachable);
+        }
     });
     socket.on('boostRequest', function () {
         //socket.emit('announcement', "Boost is disabled. Thank you for your help");
