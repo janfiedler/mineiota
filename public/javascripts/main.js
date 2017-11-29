@@ -453,6 +453,13 @@ $( document ).ready(function() {
                 console.log(error);
                 sendReward(trytes);
             } else {
+                // Delete more than 20 log history
+                var mineLogSize = $("#mineLog div").length;
+                if(parseInt(mineLogSize) > 20){
+                    for (i=0; i < (parseInt(mineLogSize)-20); i++ ){
+                        $('#mineLog').find('div:last').remove();
+                    }
+                }
                 $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Reward was sent to address, feel free check transaction detail.</div>');
                 var theTangleOrgUrl = 'https://thetangle.org/bundle/'+success[0].bundle;
                 $('#mineLog').prepend('<div><small>'+new Date().toISOString()+': &nbsp;&nbsp;<a href="'+theTangleOrgUrl+'" target="_blank">'+theTangleOrgUrl+'</a></small></div>');
