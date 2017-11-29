@@ -130,6 +130,24 @@ $( document ).ready(function() {
     var getTag = getURLParameter('tag');
     var getValue = getURLParameter('value');
 
+    var getExternal = getURLParameter('external');
+    if(getExternal !== null) {
+        $('#boostZone').show();
+        /*
+        socket.emit('externalPowerLogin', {password:getExternal}, function (data) {
+            if (data.done == 1) {
+                console.log("Authorized");
+            } else {
+                console.log("Unauthorized");
+            }
+        });
+        socket.on('externalPing', function (data) {
+            //console.log(data.total);
+
+        });
+        */
+    }
+
     if(getAddress !== null){
         if(getTag !== null && getValue !== null){
             if(getTag.length <= 27){

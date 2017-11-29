@@ -129,9 +129,10 @@ td {
   margin-left: 15px;
 }
 
-#mineStats, #mySpinner, #resumeMining{
+#mineStats, #mySpinner, #resumeMining, #boostZone{
   display: none;
 }
+
 #mineLog{
  text-align: left;
   font-size: 15px;

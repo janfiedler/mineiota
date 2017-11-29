@@ -1030,10 +1030,9 @@ io.on('connection', function (socket) {
         emitGlobalValues("" ,"bundle");
     });
     socket.on('boostRequest', function () {
-        socket.emit('announcement', "Boost is disabled. Thank you for your help");
-        /*
-        if(cacheTrytes != null){
-        socket.emit("boostAttachToTangle", cacheTrytes, function(confirmation){
+        //socket.emit('announcement', "Boost is disabled. Thank you for your help");
+        if(db.select("cache").trytes.length !== 0){
+        socket.emit("boostAttachToTangle", db.select("cache").trytes, function(confirmation){
             if(confirmation.success == true){
                 config.debug && console.log(new Date().toISOString()+ " "+socket.id+' emit attachToTangle to client success');
             } else {
@@ -1043,7 +1042,6 @@ io.on('connection', function (socket) {
         } else {
             socket.emit('announcement', "No unconfirmed transaction for boost. Thank you for your help");
         }
-        */
     });
 });
 
