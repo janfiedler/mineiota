@@ -1065,6 +1065,7 @@ io.on('connection', function (socket) {
         config.debug && console.log(new Date().toISOString()+' Success: External computing unit finished PoW');
         config.debug && console.timeEnd('external-pow-time');
 
+        roundQueueTimer();
         powInProgress = false;
         emitGlobalValues("" ,"bundle");
     });
