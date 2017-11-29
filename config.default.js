@@ -3,12 +3,15 @@ var config = {
         debug: true,
         port: 3000,
         url: 'http://127.0.0.1',
-        outputsInTransaction: 10,
+        outputsInBundle: 10,
         reattachAfterMinutes: 10,
         automaticWithdrawal: false,
         skipWithdrawal: false,
         skipAfterMinutes: 60,
         spamming: true,
+        externalCompute: false,
+        externalComputePassword: 'secretPassword',
+        externalOutputsInBundle: 100,
         // Address where to send rest of funds if balance is lower for next payment
         remainingBalanceAddress: '',
         // IOTA Provider details
@@ -32,12 +35,15 @@ var config = {
         debug: false,
         port: 3000,
         url: 'https://yourwebsite.com',
-        outputsInTransaction: 10,
+        outputsInBundle: 10,
         reattachAfterMinutes: 10,
         automaticWithdrawal: false,
         skipWithdrawal: false,
         skipAfterMinutes: 60,
         spamming: true,
+        externalCompute: false,
+        externalComputePassword: 'secretPassword',
+        externalOutputsInBundle: 100,
         // Address where to send rest of funds if balance is lower for next payment
         remainingBalanceAddress: '',
         // IOTA Provider details

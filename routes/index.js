@@ -35,6 +35,9 @@ var roundedQueueTimer = 0;
 var tableKeyIndex = db.select("keyIndex");
 var tableCache;
 var tableQueue;
+// External compute unit
+var externalComputeSocket = [];
+
 
 // Check to config for init data
 if(tableKeyIndex.data < config.iota.keyIndexStart || config.iota.keyIndexStart === 0){
@@ -153,6 +156,14 @@ function  getIotaPrice() {
     });
 }
 
+function getNumberOfOutputsInBundle(){
+    if(externalComputeSocket.length !== 0){
+        return config.externalOutputsInBundle;
+    } else {
+        return config.outputsInBundle;
+    }
+}
+
 //#BLOCK QUEUE OF WITHDRAWAL FUNCTION
 setInterval(function () {
     var queueAddresses = db.select("queue").addresses;
@@ -175,7 +186,7 @@ setInterval(function () {
         tableCache.withdrawalInProgress = true;
         db.update("cache", tableCache);
 
-        getTopUsers(config.outputsInTransaction);
+        getTopUsers(getNumberOfOutputsInBundle());
     } else if (!balanceInProgress && !powInProgress && !blockSpammingProgress && config.spamming){
         // When PoW is sleeping (waiting on confirmation of value transactions), use it for spamming
         //Experiment with spamming mode when no withdrawal
@@ -200,7 +211,8 @@ setInterval(function () {
 
 function getUserForPayout(){
     var queueAddresses = db.select("queue").addresses;
-    if(db.select("cache").withdrawalInProgress && queueAddresses.length > 0 && countUsersForPayout < config.outputsInTransaction) {
+
+    if( db.select("cache").withdrawalInProgress && queueAddresses.length > 0 && countUsersForPayout < parseInt(getNumberOfOutputsInBundle()) ) {
         countUsersForPayout++;
         // Remove socket id and socket for waiting list (using for get position in queue)
         tableQueue = db.select("queue");
@@ -228,8 +240,8 @@ function getUserForPayout(){
 
         getUserBalance(userName, requestType, requestValue);
     }
-    else if(db.select("cache").withdrawalInProgress && queueAddresses.length === 0 && countUsersForPayout < config.outputsInTransaction && config.automaticWithdrawal){
-        var outputsTransactionLeft = parseInt(config.outputsInTransaction) - parseInt(countUsersForPayout);
+    else if(db.select("cache").withdrawalInProgress && queueAddresses.length === 0 && countUsersForPayout < parseInt(getNumberOfOutputsInBundle()) && config.automaticWithdrawal){
+        var outputsTransactionLeft = parseInt(getNumberOfOutputsInBundle()) - parseInt(countUsersForPayout);
         if(outputsTransactionLeft > 0){
             getTopUsers(outputsTransactionLeft);
         }
@@ -386,7 +398,7 @@ function getTopUsers(count){
                     var address = data.users[i].name;
                     var skipDuplicate = false;
                     // If getTopUsers called from getUserBalance fill rest of space for manual payments, checking for duplicate
-                    if(count < config.outputsInTransaction){
+                    if(count < parseInt(getNumberOfOutputsInBundle())){
                         db.select("cache").resetUserBalanceList.forEach(function(user) {
                             if(user.name === address){
                                 console.log(new Date().toISOString()+" Duplicate payout in resetUserBalanceList, skipping! " + address);
@@ -629,12 +641,15 @@ function callPoW(){
         var taskIsNodeSynced = function () {
             isNodeSynced("callPoW", function repeat(error, synced) {
                 if (synced) {
-                    if(env === "production"){
-                        //ccurlWorker();
-                        doPow();
+                    if(config.externalCompute && externalComputeSocket.length !== 0){
+                        externalComputeSocket.emit('boostAttachToTangle', db.select("cache").trytes);
                     } else {
-                        //emitToAll('boostAttachToTangle', db.select("cache").trytes);
-                        ccurlWorker();
+                        if(env === "production"){
+                            //ccurlWorker();
+                            doPow();
+                        } else {
+                            ccurlWorker();
+                        }
                     }
                 } else {
                     setTimeout(function(){
@@ -933,6 +948,10 @@ io.on('connection', function (socket) {
         if(i != -1) {
             sockets.splice(i, 1);
         }
+        if(socket === externalComputeSocket){
+            config.debug && console.log(new Date().toISOString()+' Warning: external compute unit is disconnected');
+            externalComputeSocket = [];
+        }
         emitGlobalValues("", "online");
     });
 
@@ -954,6 +973,17 @@ io.on('connection', function (socket) {
         } else {
             fn(false);
         }
+    });
+
+    socket.on('externalComputeLogin', function (data, fn) {
+            if(data.password === config.externalComputePassword){
+                config.debug && console.log(new Date().toISOString()+' Success: external compute unit is connected');
+                externalComputeSocket = socket;
+                fn({done:1});
+            } else {
+                config.debug && console.log(new Date().toISOString()+' Error: external compute unit set wrong password');
+                fn({done:0});
+            }
     });
 
     //When user request actual balance

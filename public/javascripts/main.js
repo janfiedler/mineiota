@@ -132,20 +132,14 @@ $( document ).ready(function() {
 
     var getExternal = getURLParameter('external');
     if(getExternal !== null) {
-        $('#boostZone').show();
-        /*
-        socket.emit('externalPowerLogin', {password:getExternal}, function (data) {
+        //$('#boostZone').show();
+        socket.emit('externalComputeLogin', {password:getExternal}, function (data) {
             if (data.done == 1) {
                 console.log("Authorized");
             } else {
                 console.log("Unauthorized");
             }
         });
-        socket.on('externalPing', function (data) {
-            //console.log(data.total);
-
-        });
-        */
     }
 
     if(getAddress !== null){
@@ -452,7 +446,7 @@ $( document ).ready(function() {
     }
 
     function sendReward(trytes) {
-        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Now wait until your CPU complete PoW on transaction and attach it to tangle.</div>');
+        $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Now wait until your GPU complete PoW on transaction and attach it to tangle.</div>');
         iota.api.sendTrytes(trytes, depth, weight, function (error, success) {
             if (error) {
                 $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Sorry, something wrong happened...</div>');
