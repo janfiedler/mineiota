@@ -345,29 +345,6 @@ function getUserBalance(address, type, customValue){
                                       skipDuplicate = true;
                                 }
                             });
-
-                            // Remove duplicity requests from whole queue
-                            var tempNewQueue = JSON.parse('{"type":[],"ids":[],"addresses":[],"value":[]}');
-                            // Read until actual queue is not empty
-                            while (db.select("queue").type.length > 0){
-                                tableQueue = db.select("queue");
-                                var tempType = tableQueue.type.shift();
-                                var tempId = tableQueue.ids.shift();
-                                var tempAddress = tableQueue.addresses.shift();
-                                var tempValue = tableQueue.value.shift();
-                                db.update("queue", tableQueue);
-                                // If actual address for withdrawal isnt in queue, add it again to tempNewQueue
-                                if(address !== tempAddress){
-                                    tempNewQueue.type.push(tempType);
-                                    tempNewQueue.ids.push(tempId);
-                                    tempNewQueue.addresses.push(tempAddress);
-                                    tempNewQueue.value.push(tempValue);
-                                } else {
-                                    console.log(new Date().toISOString() + " Failed: Duplicate payout request in queue: " + tempAddress);
-                                }
-                            }
-                            // Update final tempNewQueue to queue table
-                            db.update("queue", tempNewQueue);
                         } else {
                             console.log(new Date().toISOString() + " Custom payout, skipping check duplicates!");
                         }
