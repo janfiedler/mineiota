@@ -521,7 +521,7 @@ function prepareLocalTransfers(){
                 config.debug && console.log(new Date().toISOString()+' Transfer: store actual keyIndex: '+result.keyIndex);
             }
             if(typeof result.inputAddress !== 'undefined'){
-                config.debug && console.log(new Date().toISOString()+' Now waiting at confirmation of transaction: '+result.inputAddress);
+                config.debug && console.log(new Date().toISOString()+' Now waiting at funds are moved from: '+result.inputAddress);
                 tableCaches.seeds[seedRound].isReattachable = result.inputAddress ;
             } else {
                 // Something wrong, next in queue can go
