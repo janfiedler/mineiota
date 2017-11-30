@@ -563,10 +563,12 @@ function sendQueuePosition(socket){
 //#BLOCK CHECKING CONFIRMED TRANSACTION BEFORE SEND NEW ROUND
 var waitConfirm;
 // When server is restarted, check if we have already running waiting on confirmation transaction
+/*
 if(db.select("caches").seeds[seedRound].isReattachable !== null){
     setInterval(isReattachable, 30000);
 }
-
+*/
+isReattachable();
 // Checking if transaction is confirmed
 function isReattachable(){
     if(!powInProgress) {
@@ -640,6 +642,10 @@ function switchToNextSeedPosition(){
     }
     config.debug && console.log(new Date().toISOString() + ' Next seed position: ' + seedRound);
     getBalance();
+    setTimeout(function(){
+        isReattachable();
+    }, 30000);
+
 }
 
 // Reset total on coinhive.com on request
