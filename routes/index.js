@@ -567,7 +567,7 @@ function isReattachable(){
         var queueTimer = tableCaches.seeds[seedRound].queueTimer;
         var queueAddresses = db.select("queue").addresses;
         if (checkAddressIsReattachable !== null) {
-            queueTimer++;config.debug && console.log('################################################################');
+            queueTimer++;config.debug && console.log('################################################################################################################################');
             config.debug && console.log(new Date().toISOString() + ' Actual queue run for minutes: ' + queueTimer / 2);
             config.debug && console.log(new Date().toISOString() + ' Seed position: ' + seedRound);
             tableCaches.seeds[seedRound].queueTimer = queueTimer;
