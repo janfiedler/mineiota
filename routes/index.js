@@ -54,6 +54,7 @@ var iota = new IOTA({
 
 // Init
 // Request on startup
+getRates("cacheBalance");
 getRates("price");
 
 setInterval(function () {
@@ -81,6 +82,11 @@ function getRates(type){
                 });
             };
             taskIsNodeSynced();
+            break;
+        case "cacheBalance":
+            for (var i in db.select("caches").seeds) {
+                cacheBalance += tableCaches.seeds[i].balance;
+            }
             break;
         case "price":
             getTotalIotaPerSecond();
