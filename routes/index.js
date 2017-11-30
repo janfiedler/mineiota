@@ -570,7 +570,9 @@ function isReattachable(){
             // Add 30 second for each seed, where we waiting 30 seconds before come this on turn
             // Only if  isReattachable is not called from confirmation of proof of work
             if(queueTimer > 0){
-            queueTimer = queueTimer + (parseInt(tableCaches.seeds.length)-1);
+                queueTimer = queueTimer + (parseInt(tableCaches.seeds.length)-1);
+            } else {
+                queueTimer++;
             }
 
             config.debug && console.log('################################################################################################################################');
