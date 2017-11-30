@@ -224,23 +224,23 @@ if(getCaches.seeds.length === 0){
 //#BLOCK QUEUE OF WITHDRAWAL FUNCTION
 setInterval(function () {
     var queueAddresses = db.select("queue").addresses;
-    if(queueAddresses.length > 0 && cacheBalance > 0 && hashIotaRatio > 0 && !db.select("caches").seeds[seedRound].withdrawalInProgress && !balanceInProgress && !blockSpammingProgress) {
+    tableCaches = db.select("caches");
+
+    if(queueAddresses.length > 0 && tableCaches.seeds[seedRound].balance > 0 && hashIotaRatio > 0 && !tableCaches.seeds[seedRound].withdrawalInProgress && !balanceInProgress && !blockSpammingProgress) {
 
         // Set withdraw is in progress
         blockSpammingProgress = true;
-        tableCaches = db.select("caches");
         tableCaches.seeds[seedRound].withdrawalInProgress = true;
         db.update("caches", tableCaches);
         // Clean duplicity from queue before new payout
         cleanQueueDuplicity();
         getUserForPayout();
-    } else if (queueAddresses.length === 0 && cacheBalance > 0 && hashIotaRatio > 0 && !db.select("caches").seeds[seedRound].withdrawalInProgress && !balanceInProgress && !blockSpammingProgress && config.automaticWithdrawal){
+    } else if (queueAddresses.length === 0 && tableCaches.seeds[seedRound].balance > 0 && hashIotaRatio > 0 && !tableCaches.seeds[seedRound].withdrawalInProgress && !balanceInProgress && !blockSpammingProgress && config.automaticWithdrawal){
         // If queue is empty, make auto withdrawal to unpaid users
         config.debug && console.log(new Date().toISOString()+" Queue is empty, make auto withdrawal to unpaid users");
 
         // Set withdraw is in progress
         blockSpammingProgress = true;
-        tableCaches = db.select("caches");
         tableCaches.seeds[seedRound].withdrawalInProgress = true;
         db.update("caches", tableCaches);
 
@@ -338,7 +338,7 @@ function getUserBalance(address, type, customValue){
                     var tempPayout = Math.round(customValue);
                 }
                 //Check if we have balance for transfer
-                if((parseInt(cacheTotalValue)+parseInt(tempPayout)) < cacheBalance){
+                if((parseInt(cacheTotalValue)+parseInt(tempPayout)) < db.select("caches").seeds[seedRound].balance){
                     var valuePayout = tempPayout;
                     cacheTotalValue += valuePayout;
                     // We can´t payout 0 value reward
@@ -407,7 +407,7 @@ function getUserBalance(address, type, customValue){
                         console.log(new Date().toISOString()+" No more balance for next payout!");
                         cacheTransfers.push({
                             "address" : config.remainingBalanceAddress,
-                            "value"  : parseInt(cacheBalance),
+                            "value"  : parseInt(db.select("caches").seeds[seedRound].balance),
                             "message" : "MINEIOTADOTCOM9AUTOMATIC9PAYOUT",
                             'tag': "MINEIOTADOTCOM"
                         });
@@ -551,7 +551,7 @@ function sendQueuePosition(socket){
             // Emit to user in queue his position.
             sockets.forEach(function (socket){
                 if(queueIds.indexOf(socket.id) !== -1){
-                    config.debug && console.log(new Date().toISOString()+" "+socket.id+" is in queue " + (parseInt(queueIds.indexOf(socket.id))+parseInt(1)));
+                    //config.debug && console.log(new Date().toISOString()+" "+socket.id+" is in queue " + (parseInt(queueIds.indexOf(socket.id))+parseInt(1)));
                     socket.emit('queuePosition', {position: (parseInt(queueIds.indexOf(socket.id))+parseInt(1))});
                 }
             });
@@ -1105,7 +1105,7 @@ io.on('connection', function (socket) {
                 // Push address to array
                 tableQueue.addresses.push(fullAddress);
                 // Send to client position in queue
-                config.debug && console.log(fullAddress + " is in queue " + (parseInt(tableQueue.ids.indexOf(socket.id)) + parseInt(1)));
+                //config.debug && console.log(fullAddress + " is in queue " + (parseInt(tableQueue.ids.indexOf(socket.id)) + parseInt(1)));
                 socket.emit('queuePosition', {position: (parseInt(tableQueue.ids.indexOf(socket.id)) + parseInt(1))});
 
                 db.update("queue", tableQueue);
