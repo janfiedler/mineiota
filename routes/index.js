@@ -903,7 +903,7 @@ function isAddressAttachedToTangle(address, callback) {
                             return;
                         }
                     }
-                    config.debug && console.log(new Date().toISOString()+' Warning: '+address+' is attached, but not confirmed to tangle! ');
+                    //config.debug && console.log(new Date().toISOString()+' Warning: '+address+' is attached, but not confirmed to tangle! ');
                     callback(null, 0);
                 })
             }
