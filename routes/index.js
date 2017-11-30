@@ -54,8 +54,6 @@ var iota = new IOTA({
 
 // Init
 // Request on startup
-
-getRates("balance");
 getRates("price");
 
 setInterval(function () {
