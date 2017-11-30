@@ -570,6 +570,7 @@ function isReattachable(){
         var queueAddresses = db.select("queue").addresses;
         if (checkAddressIsReattachable !== null) {
             queueTimer++;
+            config.debug && console.log(new Date().toISOString() + ' Actual queue run for minutes: ' + queueTimer / 2);
             tableCaches.seeds[seedRound].queueTimer = queueTimer;
             db.update("caches", tableCaches);
 
