@@ -269,6 +269,9 @@ function startNewPayout(){
         };
         taskIsNodeSynced();
 
+    } else if(tableCaches.seeds[seedRound].balance === 0){
+        config.debug && console.log(new Date().toISOString() + " Warning: This seed have zero balance, switch to next");
+        switchToNextSeedPosition();
     }
 }
 
@@ -573,6 +576,7 @@ function isReattachable(){
         var checkAddressIsReattachable = tableCaches.seeds[seedRound].isReattachable;
         var queueTimer = tableCaches.seeds[seedRound].queueTimer;
         var queueAddresses = db.select("queue").addresses;
+
         if (checkAddressIsReattachable !== null) {
             // Add 30 second for each seed, where we waiting 30 seconds before come this on turn
             // Only if  isReattachable is not called from confirmation of proof of work
@@ -642,7 +646,13 @@ function isReattachable(){
             });
         } else {
             config.debug && console.log(new Date().toISOString() + " Error: inputAddressConfirm: " + checkAddressIsReattachable);
-            switchToNextSeedPosition();
+            //Start new payout to next when is new seed added and have balance
+            if(tableCaches.seeds[seedRound].isReattachable > 0){
+                startNewPayout();
+            } else {
+                switchToNextSeedPosition();
+            }
+
         }
     }
 }
@@ -656,7 +666,7 @@ function switchToNextSeedPosition(){
     }
     config.debug && console.log(new Date().toISOString() + ' Next seed position: ' + seedRound);
     if(getCaches.seeds[seedRound].balance === 0){
-        getBalance();
+        getRates("balance");
     }
 
     setTimeout(function(){
@@ -963,10 +973,6 @@ function isValidChecksum(addressWithChecksum){
 }
 function noChecksum(addressWithChecksum){
     return iota.utils.noChecksum(addressWithChecksum);
-}
-// Check if it is rounded interger and not float
-function isInteger(n) {
-    return n === +n && n === (n|0);
 }
 
 function getBalance(){
