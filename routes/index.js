@@ -630,7 +630,7 @@ function isReattachable(){
                     resetPayout();
                 } else if (queueTimer > nextQueueTimer && parseInt(queueTimer) !== 0) {
                     // Set and save next queue timer
-                    nextQueueTimer = nextQueueTimer + (parseInt(config.skipAfterMinutes)*parseInt(2))
+                    nextQueueTimer = nextQueueTimer + (parseInt(config.reattachAfterMinutes)*parseInt(2))
                     tableCaches.seeds[seedRound].nextQueueTimer = nextQueueTimer;
                     db.update("caches", tableCaches);
                     // Add one minute to queue timer
