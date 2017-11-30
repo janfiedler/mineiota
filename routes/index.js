@@ -209,7 +209,7 @@ if(getCaches.seeds.length === 0){
     var getSeeds = config.iota.seeds.seeds;
     for (var i in getSeeds) {
         // Fill temp data
-        var tempSeed = {"seed":null,"keyIndex":0,"balance":0,"withdrawalInProgress":false,"isReattachable":null,"resetUserBalanceList":[],"trytes":[],"bundleHash":null,"queueTimer":0};
+        var tempSeed = {"seed":null,"keyIndex":0,"balance":0,"withdrawalInProgress":false,"isReattachable":null,"resetUserBalanceList":[],"trytes":[],"bundleHash":null,"queueTimer":0,"nextQueueTimer":0};
         tempSeed.seed = getSeeds[i].seed;
         tempSeed.keyIndex = getSeeds[i].keyIndex;
         // Add temp data to JSON array
@@ -569,6 +569,8 @@ function isReattachable(){
         if (checkAddressIsReattachable !== null) {
             // Add 30 second for each seed, where we waiting 30 seconds before come this on turn
             // Only if  isReattachable is not called from confirmation of proof of work
+
+            var nextQueueTimer =  tableCaches.seeds[seedRound].nextQueueTimer;
             if(queueTimer > 0){
                 queueTimer = queueTimer + (parseInt(tableCaches.seeds.length)-1);
             } else {
@@ -615,7 +617,10 @@ function isReattachable(){
                     config.debug && console.log(new Date().toISOString() + 'Error: Transaction is not confirmed after 45 minutes, skipping to the next in queue');
                     // Error: Transaction is not confirmed, resetPayout
                     resetPayout();
-                } else if (isInteger(parseInt(queueTimer) / (parseInt(config.reattachAfterMinutes)*parseInt(2))) && parseInt(queueTimer) !== 0) {
+                } else if (queueTimer > nextQueueTimer && parseInt(queueTimer) !== 0) {
+                    // Set and save next queue timer
+                    tableCaches.seeds[seedRound].nextQueueTimer = nextQueueTimer + (parseInt(config.skipAfterMinutes)*parseInt(2));
+                    db.update("caches", tableCaches);
                     // Add one minute to queue timer
                     // On every X minutes in queue, do PoW again
                     config.debug && console.log(new Date().toISOString() + ' Failed: Do PoW again ');
