@@ -619,7 +619,8 @@ function isReattachable(){
                     resetPayout();
                 } else if (queueTimer > nextQueueTimer && parseInt(queueTimer) !== 0) {
                     // Set and save next queue timer
-                    tableCaches.seeds[seedRound].nextQueueTimer = nextQueueTimer + (parseInt(config.skipAfterMinutes)*parseInt(2));
+                    nextQueueTimer = nextQueueTimer + (parseInt(config.skipAfterMinutes)*parseInt(2))
+                    tableCaches.seeds[seedRound].nextQueueTimer = nextQueueTimer;
                     db.update("caches", tableCaches);
                     // Add one minute to queue timer
                     // On every X minutes in queue, do PoW again
