@@ -569,8 +569,9 @@ function isReattachable(){
         var queueTimer = tableCaches.seeds[seedRound].queueTimer;
         var queueAddresses = db.select("queue").addresses;
         if (checkAddressIsReattachable !== null) {
-            queueTimer++;
+            queueTimer++;config.debug && console.log('################################################################');
             config.debug && console.log(new Date().toISOString() + ' Actual queue run for minutes: ' + queueTimer / 2);
+            config.debug && console.log(new Date().toISOString() + ' Seed position: ' + seedRound);
             tableCaches.seeds[seedRound].queueTimer = queueTimer;
             db.update("caches", tableCaches);
 
@@ -614,9 +615,7 @@ function isReattachable(){
                     // Check if node is synced, this also call proof of work
                     callPoW();
                 } else {
-                    config.debug && console.log(new Date().toISOString() + ' Seed position: ' + seedRound);
                     config.debug && console.log(new Date().toISOString() + ' Miners online: ' + sockets.length);
-                    config.debug && console.log(new Date().toISOString() + ' Actual queue run for minutes: ' + queueTimer / 2);
                     config.debug && console.log(new Date().toISOString() + ' Transactions in queue: ' + queueAddresses.length);
                     config.debug && console.log(new Date().toISOString() + ' Waiting on transaction confirmation: ' + checkAddressIsReattachable);
                     switchToNextSeedPosition();
