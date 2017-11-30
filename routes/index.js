@@ -567,7 +567,10 @@ function isReattachable(){
         var queueTimer = tableCaches.seeds[seedRound].queueTimer;
         var queueAddresses = db.select("queue").addresses;
         if (checkAddressIsReattachable !== null) {
-            queueTimer++;config.debug && console.log('################################################################################################################################');
+            // Add 30 second for each seed, where we waiting 30 seconds before come this on turn
+            queueTimer = queueTimer + (parseInt(tableCaches.seeds.length)-1);
+
+            config.debug && console.log('################################################################################################################################');
             config.debug && console.log(new Date().toISOString() + ' Actual queue run for minutes: ' + queueTimer / 2);
             config.debug && console.log(new Date().toISOString() + ' Seed position: ' + seedRound);
             config.debug && console.log(new Date().toISOString() + ' Check bundle confirmation: ' + tableCaches.seeds[seedRound].bundleHash);
