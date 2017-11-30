@@ -617,11 +617,12 @@ function isReattachable(){
                     // Check if node is synced, this also call proof of work
                     callPoW();
                 } else {
+                    config.debug && console.log(new Date().toISOString() + ' Seed position: ' + seedRound);
                     config.debug && console.log(new Date().toISOString() + ' Miners online: ' + sockets.length);
                     config.debug && console.log(new Date().toISOString() + ' Actual queue run for minutes: ' + queueTimer / 2);
                     config.debug && console.log(new Date().toISOString() + ' Transactions in queue: ' + queueAddresses.length);
                     config.debug && console.log(new Date().toISOString() + ' Waiting on transaction confirmation: ' + checkAddressIsReattachable);
-                    switchToNextSeedRound();
+                    switchToNextSeedPosition();
                 }
             });
         } else {
@@ -630,14 +631,14 @@ function isReattachable(){
     }
 }
 
-function switchToNextSeedRound(){
+function switchToNextSeedPosition(){
     seedRound++;
-    // Check if new seed round is not bigger than we have seeds
+    // Check if new seed position is not bigger than we have seeds
     var getCaches = db.select("caches");
     if(seedRound > (parseInt(getCaches.seeds.length)-1)){
         seedRound = 0;
     }
-    config.debug && console.log(new Date().toISOString() + ' Next seed round: ' + seedRound);
+    config.debug && console.log(new Date().toISOString() + ' Next seed position: ' + seedRound);
 }
 
 // Reset total on coinhive.com on request
