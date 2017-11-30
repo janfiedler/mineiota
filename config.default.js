@@ -18,8 +18,7 @@ var config = {
         iota: {
             host:   'https://yournode.com',
             port:   '14265',
-            seed:   'YOUR99SEED',
-            keyIndexStart: 0 // Number where is your keyIndex in seed addresses
+            seeds:  {"seeds":[{"seed":"seed1","keyIndex":0},{"seed":"seed2","keyIndex":0},{"seed":"seed3","keyIndex":0},{"seed":"seed4","keyIndex":0}]}
         },
         // https://coinhive.com details
         coinhive: {
@@ -50,8 +49,7 @@ var config = {
         iota: {
             host:   'https://yournode.com',
             port:   '14265',
-            seed:   'YOUR99SEED',
-            keyIndexStart: 30 // Number where is your keyIndex in seed addresses
+            seeds:  {"seeds":[{"seed":"seed1","keyIndex":0},{"seed":"seed2","keyIndex":0},{"seed":"seed3","keyIndex":0},{"seed":"seed4","keyIndex":0}]}
         },
         // https://coinhive.com details
         coinhive: {

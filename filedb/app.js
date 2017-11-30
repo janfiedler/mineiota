@@ -7,16 +7,11 @@ module.exports = {
         if (!fs.existsSync(folder+table+'.json')) {
             var tableDefault = "";
              switch(String(table)) {
-                case "keyIndex":
-                    tableDefault = '{"data":0}';
-                    this.update(table, JSON.parse(tableDefault));
-                    return JSON.parse(tableDefault);
-                    break;
-                case "cache":
-                    tableDefault = '{"withdrawalInProgress":false,"isReattachable":null,"resetUserBalanceList":[],"trytes":[],"bundleHash":null}';
-                    this.update(table, JSON.parse(tableDefault));
-                    return JSON.parse(tableDefault);
-                    break;
+                 case "caches":
+                     tableDefault = '{"seeds":[]}';
+                     this.update(table, JSON.parse(tableDefault));
+                     return JSON.parse(tableDefault);
+                     break;
                 case "queue":
                     tableDefault = '{"type":[],"ids":[],"addresses":[],"value":[]}';
                     this.update(table, JSON.parse(tableDefault));

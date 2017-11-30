@@ -8,16 +8,18 @@ var iota = new IOTA({
     'port': config.iota.port
 });
 var keyIndexStart;
+var seed;
 var totalValue = 0;
 
-process.on('message', function(message) {
-    if(typeof message.keyIndex !== 'undefined'){
+process.on('message', function(data) {
+    if(typeof data.keyIndex !== 'undefined'){
         //Set keyIndex for next use
-        keyIndexStart = message.keyIndex;
-    } else if(typeof message.totalValue !== 'undefined'){
+        seed = data.seed;
+        keyIndexStart = data.keyIndex;
+    } else if(typeof data.totalValue !== 'undefined'){
         //Set keyIndex for next use
-        totalValue = message.totalValue;
-    } else if(typeof message[0].value !== 'undefined')  {
+        totalValue = data.totalValue;
+    } else if(typeof data[0].value !== 'undefined')  {
         // Set custom options with keyIndex and total value for getInputs
         var options = {
             'start': parseInt(keyIndexStart),
@@ -25,7 +27,7 @@ process.on('message', function(message) {
             'threshold': parseInt(totalValue)
         };
         // Get inputs for next transaction by options
-        iota.api.getInputs(config.iota.seed, options, function (error, inputsData) {
+        iota.api.getInputs(seed, options, function (error, inputsData) {
             if (error) {
                 process.send(error);
                 config.debug && console.log(error);
@@ -47,7 +49,7 @@ process.on('message', function(message) {
                     'returnAll': false
                 };
                 // Generate new address by options
-                iota.api.getNewAddress(config.iota.seed, options, function(error, newAddress){
+                iota.api.getNewAddress(seed, options, function(error, newAddress){
 
                     if (error) {
                         config.debug && console.log(error);
@@ -60,7 +62,7 @@ process.on('message', function(message) {
                         'security': parseInt(2)
                     };
                     // Prepare trytes data
-                    iota.api.prepareTransfers(config.iota.seed, message, options, function (error, success) {
+                    iota.api.prepareTransfers(seed, data, options, function (error, success) {
                         if (error) {
                             config.debug && console.log(error);
                             process.send({status: "error", result: error});

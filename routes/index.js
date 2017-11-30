@@ -28,22 +28,12 @@ var countUsersForPayout = 0;
 var cacheBalance = 0;
 var cacheTransfers = [];
 var cacheTotalValue = 0;
-// Count loops in queue
-var queueTimer = 0;
-var roundedQueueTimer = 0;
 // init table variable for file database
-var tableKeyIndex = db.select("keyIndex");
-var tableCache;
+var tableCaches;
 var tableQueue;
 // External compute unit
 var externalComputeSocket = [];
 
-
-// Check to config for init data
-if(tableKeyIndex.data < config.iota.keyIndexStart || config.iota.keyIndexStart === 0){
-    tableKeyIndex.data = config.iota.keyIndexStart;
-    db.update("keyIndex", tableKeyIndex);
-}
 // List of https providers
 const httpsProviders = [
     "https://iota.onlinedata.cloud:14443"
@@ -212,29 +202,47 @@ function cleanQueueDuplicity(){
     console.log("New count in queue: " + db.select("queue").addresses.length);
 
 }
+
+// Actual round of seed
+var seedRound = 0;
+// Init default seeds from config
+var getCaches = db.select("caches");
+if(getCaches.seeds.length === 0){
+    var getSeeds = config.iota.seeds.seeds;
+    for (var i in getSeeds) {
+        // Fill temp data
+        var tempSeed = {"seed":null,"keyIndex":0,"balance":0,"withdrawalInProgress":false,"isReattachable":null,"resetUserBalanceList":[],"trytes":[],"bundleHash":null,"queueTimer":0};
+        tempSeed.seed = getSeeds[i].seed;
+        tempSeed.keyIndex = getSeeds[i].keyIndex;
+        // Add temp data to JSON array
+        getCaches.seeds.push(tempSeed);
+    }
+    // Update to file db
+    db.update("caches", getCaches);
+}
+
 //#BLOCK QUEUE OF WITHDRAWAL FUNCTION
 setInterval(function () {
     var queueAddresses = db.select("queue").addresses;
-    if(queueAddresses.length > 0 && cacheBalance > 0 && hashIotaRatio > 0 && !db.select("cache").withdrawalInProgress && !balanceInProgress && !blockSpammingProgress) {
+    if(queueAddresses.length > 0 && cacheBalance > 0 && hashIotaRatio > 0 && !db.select("caches").seeds[seedRound].withdrawalInProgress && !balanceInProgress && !blockSpammingProgress) {
 
         // Set withdraw is in progress
         blockSpammingProgress = true;
-        tableCache = db.select("cache");
-        tableCache.withdrawalInProgress = true;
-        db.update("cache", tableCache);
-
+        tableCaches = db.select("caches");
+        tableCaches.seeds[seedRound].withdrawalInProgress = true;
+        db.update("caches", tableCaches);
         // Clean duplicity from queue before new payout
         cleanQueueDuplicity();
         getUserForPayout();
-    } else if (queueAddresses.length === 0 && cacheBalance > 0 && hashIotaRatio > 0 && !db.select("cache").withdrawalInProgress && !balanceInProgress && !blockSpammingProgress && config.automaticWithdrawal){
+    } else if (queueAddresses.length === 0 && cacheBalance > 0 && hashIotaRatio > 0 && !db.select("caches").seeds[seedRound].withdrawalInProgress && !balanceInProgress && !blockSpammingProgress && config.automaticWithdrawal){
         // If queue is empty, make auto withdrawal to unpaid users
         config.debug && console.log(new Date().toISOString()+" Queue is empty, make auto withdrawal to unpaid users");
 
         // Set withdraw is in progress
         blockSpammingProgress = true;
-        tableCache = db.select("cache");
-        tableCache.withdrawalInProgress = true;
-        db.update("cache", tableCache);
+        tableCaches = db.select("caches");
+        tableCaches.seeds[seedRound].withdrawalInProgress = true;
+        db.update("caches", tableCaches);
 
         getTopUsers(getNumberOfOutputsInBundle());
     } else if (!balanceInProgress && !powInProgress && !blockSpammingProgress && config.spamming){
@@ -262,7 +270,7 @@ setInterval(function () {
 function getUserForPayout(){
     var queueAddresses = db.select("queue").addresses;
 
-    if( db.select("cache").withdrawalInProgress && queueAddresses.length > 0 && countUsersForPayout < parseInt(getNumberOfOutputsInBundle()) ) {
+    if( db.select("caches").seeds[seedRound].withdrawalInProgress && queueAddresses.length > 0 && countUsersForPayout < parseInt(getNumberOfOutputsInBundle()) ) {
         countUsersForPayout++;
         // Remove socket id and socket for waiting list (using for get position in queue)
         tableQueue = db.select("queue");
@@ -290,13 +298,13 @@ function getUserForPayout(){
 
         getUserBalance(userName, requestType, requestValue);
     }
-    else if(db.select("cache").withdrawalInProgress && queueAddresses.length === 0 && countUsersForPayout < parseInt(getNumberOfOutputsInBundle()) && config.automaticWithdrawal){
+    else if(db.select("caches").seeds[seedRound].withdrawalInProgress && queueAddresses.length === 0 && countUsersForPayout < parseInt(getNumberOfOutputsInBundle()) && config.automaticWithdrawal){
         var outputsTransactionLeft = parseInt(getNumberOfOutputsInBundle()) - parseInt(countUsersForPayout);
         if(outputsTransactionLeft > 0){
             getTopUsers(outputsTransactionLeft);
         }
     }
-    else if(db.select("cache").withdrawalInProgress) {
+    else if(db.select("caches").seeds[seedRound].withdrawalInProgress) {
         // Send to waiting sockets in queue their position
         sendQueuePosition();
         //No more addresses in queue or max countUsersForPayout, lets preprepareLocalTransfersp
@@ -310,6 +318,7 @@ function getUserForPayout(){
         }
     }
 }
+
 function getUserBalance(address, type, customValue){
     request.get({url: "https://api.coinhive.com/user/balance", qs: {"secret": config.coinhive.privateKey, "name": address}}, function (error, response, body) {
         if (!error && response.statusCode === 200) {
@@ -338,7 +347,7 @@ function getUserBalance(address, type, customValue){
                         //Check duplicity only for withdrawal, not custom transactions
                         if(customValue === 0) {
                             // If getTopUsers called from getUserBalance fill rest of space for manual payments, checking for duplicate
-                            db.select("cache").resetUserBalanceList.forEach(function (user) {
+                            db.select("caches").seeds[seedRound].resetUserBalanceList.forEach(function (user) {
                                 if (user.name === address) {
                                     console.log(new Date().toISOString() + " Failed: Duplicate payout in resetUserBalanceList, skipping! " + address);
                                     // When duplicate do not add more, skip this user and continue
@@ -432,9 +441,9 @@ function addTransferToCache(type, address, amount, hashes){
     }
 
     //After transaction is confirmed, withdraw coinhive.com balance
-    tableCache = db.select("cache");
-    tableCache.resetUserBalanceList.push({"name":address,"amount":hashes});
-    db.update("cache", tableCache);
+    tableCaches = db.select("caches");
+    tableCaches.seeds[seedRound].resetUserBalanceList.push({"name":address,"amount":hashes});
+    db.update("caches", tableCaches);
 }
 
 function getTopUsers(count){
@@ -449,7 +458,7 @@ function getTopUsers(count){
                     var skipDuplicate = false;
                     // If getTopUsers called from getUserBalance fill rest of space for manual payments, checking for duplicate
                     if(count < parseInt(getNumberOfOutputsInBundle())){
-                        db.select("cache").resetUserBalanceList.forEach(function(user) {
+                        db.select("caches").seeds[seedRound].resetUserBalanceList.forEach(function(user) {
                             if(user.name === address){
                                 console.log(new Date().toISOString()+" Duplicate payout in resetUserBalanceList, skipping! " + address);
                                 // When duplicate do not add more, skip this user and continue
@@ -491,7 +500,8 @@ function prepareLocalTransfers(){
     // Worker for prepare TRYTES transfer
     var transferWorker = cp.fork('workers/transfer.js');
 
-    transferWorker.send({keyIndex:db.select("keyIndex").data});
+    tableCaches = db.select("caches");
+    transferWorker.send({seed:tableCaches.seeds[seedRound].seed,keyIndex:tableCaches.seeds[seedRound].keyIndex});
     transferWorker.send({totalValue:cacheTotalValue});
     transferWorker.send(cacheTransfers);
 
@@ -499,27 +509,27 @@ function prepareLocalTransfers(){
         // Receive results from child process
         if(result.status === "success"){
             // Select actual tableCache
-            tableCache = db.select("cache");
-            tableCache.trytes = result.result;
-            db.update("cache", tableCache);
+            tableCaches = db.select("caches");
+            tableCaches.seeds[seedRound].trytes = result.result;
+            db.update("caches", tableCaches);
 
             // Check node sync, this also call proof of work
             callPoW();
 
             //We store actual keyIndex for next faster search and transaction
+            tableCaches = db.select("caches");
             if(typeof result.keyIndex !== 'undefined'){
-                tableKeyIndex.data = result.keyIndex;
-                db.update("keyIndex", tableKeyIndex);
+                tableCaches.seeds[seedRound].keyIndex = result.keyIndex;
                 config.debug && console.log(new Date().toISOString()+' Transfer: store actual keyIndex: '+result.keyIndex);
             }
             if(typeof result.inputAddress !== 'undefined'){
                 config.debug && console.log(new Date().toISOString()+' Now waiting at confirmation of transaction: '+result.inputAddress);
-                checkReattachable(result.inputAddress);
+                tableCaches.seeds[seedRound].isReattachable = result.inputAddress ;
             } else {
                 // Something wrong, next in queue can go
                 resetPayout();
             }
-
+            db.update("caches", tableCaches);
         } else if (result.status == "error"){
             config.debug && console.log(result);
             // Error transfer worker start again
@@ -552,24 +562,23 @@ function sendQueuePosition(socket){
 
 //#BLOCK CHECKING CONFIRMED TRANSACTION BEFORE SEND NEW ROUND
 var waitConfirm;
-// When server restart, check if we have already running waiting on confirmation transaction
-if(db.select("cache").isReattachable !== null){
-    checkReattachable(db.select("cache").isReattachable);
+// When server is restarted, check if we have already running waiting on confirmation transaction
+if(db.select("caches").seeds[seedRound].isReattachable !== null){
+    setInterval(isReattachable, 30000);
 }
 
-function checkReattachable(inputAddress){
-    tableCache = db.select("cache");
-    tableCache.isReattachable = inputAddress ;
-    db.update("cache", tableCache);
-    waitConfirm = setInterval(isReattachable, 30000);
-}
 // Checking if transaction is confirmed
 function isReattachable(){
     if(!powInProgress) {
-        var checkAddressIsReattachable = db.select("cache").isReattachable;
+        tableCaches = db.select("caches");
+        var checkAddressIsReattachable = tableCaches.seeds[seedRound].isReattachable;
+        var queueTimer = tableCaches.seeds[seedRound].queueTimer;
         var queueAddresses = db.select("queue").addresses;
         if (checkAddressIsReattachable !== null) {
             queueTimer++;
+            tableCaches.seeds[seedRound].queueTimer = queueTimer;
+            db.update("caches", tableCaches);
+
             iota.api.isReattachable(checkAddressIsReattachable, function (errors, Bool) {
                 // If false, transaction was confirmed
                 if (!Bool) {
@@ -580,7 +589,7 @@ function isReattachable(){
                                 if (synced) {
                                     // We are done, next in queue can go
                                     config.debug && console.log(new Date().toISOString() + " Success: Transaction is confirmed: " + checkAddressIsReattachable);
-                                    db.select("cache").resetUserBalanceList.forEach(function (user) {
+                                    db.select("caches").seeds[seedRound].resetUserBalanceList.forEach(function (user) {
                                         withdrawUserBalance(user.name, user.amount);
                                     });
                                     // We are done, unset the cache values
@@ -605,8 +614,6 @@ function isReattachable(){
                     // Add one minute to queue timer
                     // On every 15 minutes in queue, do PoW again
                     config.debug && console.log(new Date().toISOString() + ' Failed: Do PoW again ');
-                    // Set rounded queueTimer for round after Proof of Work
-                    roundedQueueTimer = queueTimer;
                     // Check if node is synced, this also call proof of work
                     callPoW();
                 } else {
@@ -614,6 +621,7 @@ function isReattachable(){
                     config.debug && console.log(new Date().toISOString() + ' Actual queue run for minutes: ' + queueTimer / 2);
                     config.debug && console.log(new Date().toISOString() + ' Transactions in queue: ' + queueAddresses.length);
                     config.debug && console.log(new Date().toISOString() + ' Waiting on transaction confirmation: ' + checkAddressIsReattachable);
+                    switchToNextSeedRound();
                 }
             });
         } else {
@@ -622,11 +630,16 @@ function isReattachable(){
     }
 }
 
-function roundQueueTimer(){
-    if(queueTimer >= roundedQueueTimer){
-        queueTimer = roundedQueueTimer;
+function switchToNextSeedRound(){
+    seedRound++;
+    // Check if new seed round is not bigger than we have seeds
+    var getCaches = db.select("caches");
+    if(seedRound > (parseInt(getCaches.seeds.length)-1)){
+        seedRound = 0;
     }
+    config.debug && console.log(new Date().toISOString() + ' Next seed round: ' + seedRound);
 }
+
 // Reset total on coinhive.com on request
 function resetUserBalance(userName){
     config.debug && console.log("resetUserBalance: "+userName);
@@ -659,26 +672,26 @@ function resetPayout(){
     powInProgress = false;
     blockSpammingProgress = false;
 
-    // Reset minutes before next queue, waiting on transaction confirmation
-    queueTimer = 0;
     // Reset count users in actual payout preparation
     countUsersForPayout = 0;
     // Reset total value for getInputs in transfer worker and for check if mineiota have enough balance
     cacheTotalValue = 0;
 
     // Select actual tableCache
-    tableCache = db.select("cache");
+    tableCaches = db.select("caches");
+    // Reset minutes before next queue, waiting on transaction confirmation
+    tableCaches.seeds[seedRound].queueTimer = 0;
     // Set state for withdrawal progress
-    tableCache.withdrawalInProgress = false;
+    tableCaches.seeds[seedRound].withdrawalInProgress = false;
     // input address from balance to checking if transaction is confirmed
-    tableCache.isReattachable = null ;
+    tableCaches.seeds[seedRound].isReattachable = null ;
     // Empty list of address for reset balance, we skipping to next in queue
-    tableCache.resetUserBalanceList.length = 0;
+    tableCaches.seeds[seedRound].resetUserBalanceList.length = 0;
     // Empty list of trytes data for sendTransaction (attacheToTangle)
-    tableCache.trytes.length = 0;
+    tableCaches.seeds[seedRound].trytes.length = 0;
 
     // Finally update table cache to file db
-    db.update("cache", tableCache);
+    db.update("caches", tableCaches);
 
     if(typeof cacheTransfers !== 'undefined'){
         cacheTransfers.length = 0;
@@ -694,7 +707,7 @@ function callPoW(){
                     if(config.externalCompute && externalComputeSocket.length > 0){
                         config.debug && console.log(new Date().toISOString()+" Info: External PoW worker started");
                         config.debug && console.time('external-pow-time');
-                        externalComputeSocket[0].emit('boostAttachToTangle', db.select("cache").trytes);
+                        externalComputeSocket[0].emit('boostAttachToTangle', db.select("caches").seeds[seedRound].trytes);
                     } else {
                         if(env === "production"){
                             //ccurlWorker();
@@ -721,7 +734,7 @@ function doPow(){
     var powWorker = cp.fork('workers/pow.js');
     // Send child process work to get IOTA balance
     //We pass to worker keyIndex where start looking for funds
-    powWorker.send({trytes:db.select("cache").trytes});
+    powWorker.send({trytes:db.select("caches").seeds[seedRound].trytes});
 
     powWorker.on('message', function(trytesResult) {
         // Receive results from child process
@@ -734,14 +747,12 @@ function doPow(){
             powWorker.kill();
             resetPayout();
         } else if(typeof trytesResult[0].bundle !== 'undefined') {
-            tableCache = db.select("cache");
-            tableCache.bundleHash = trytesResult[0].bundle;
-            db.update("cache", tableCache);
+            tableCaches = db.select("caches");
+            tableCaches.seeds[seedRound].bundleHash = trytesResult[0].bundle;
+            db.update("caches", tableCaches);
 
             config.debug && console.log("Success: bundle from attached transactions " + trytesResult[0].bundle);
             emitGlobalValues("", "bundle");
-
-            roundQueueTimer();
 
             powInProgress = false;
             // We have done PoW for transactions with value, now can use power for spamming
@@ -819,29 +830,26 @@ function ccurlWorker(){
     var minWeightMagnitude = 14;
     config.debug && console.log(new Date().toISOString()+" PoW worker started");
     config.debug && console.time('pow-time');
-    iota.api.sendTrytes(db.select("cache").trytes, depth, minWeightMagnitude, function (error, success) {
+    iota.api.sendTrytes(db.select("caches").seeds[seedRound].trytes, depth, minWeightMagnitude, function (error, success) {
         if (error) {
             console.error("Sorry, something wrong happened... lets try it again after 5 sec");
             config.debug && console.error(error);
             config.debug && console.timeEnd('pow-time');
 
-            roundQueueTimer();
             // Check if node is synced, this also call proof of work
             setTimeout(function(){
                 callPoW();
             }, 5000);
 
         } else {
-            tableCache = db.select("cache");
-            tableCache.bundleHash = success[0].bundle;
-            db.update("cache", tableCache);
+            tableCaches = db.select("caches");
+            tableCaches.seeds[seedRound].bundleHash = success[0].bundle;
+            db.update("caches", tableCaches);
 
             var theTangleOrgUrl = 'https://thetangle.org/bundle/'+success[0].bundle;
             console.log("Success: bundle from attached transactions " +theTangleOrgUrl);
 
             emitGlobalValues("", "bundle");
-            // Round down queue timer to get get exactly 15 min for confirmation
-            roundQueueTimer();
 
             config.debug && console.log(new Date().toISOString()+' PoW worker finished');
             console.timeEnd('pow-time');
@@ -944,7 +952,8 @@ function getBalance(){
     var balanceWorker = cp.fork('workers/balance.js');
     // Send child process work to get IOTA balance
     //We pass to worker keyIndex where start looking for funds
-    balanceWorker.send({keyIndex:db.select("keyIndex").data});
+    tableCaches = db.select("caches");
+    balanceWorker.send({seed:tableCaches.seeds[seedRound].seed,keyIndex:tableCaches.seeds[seedRound].keyIndex});
 
     balanceWorker.on('message', function(balanceResult) {
         // Receive results from child process
@@ -952,15 +961,22 @@ function getBalance(){
         config.debug && console.log(balanceResult);
         if(typeof balanceResult.inputs !== 'undefined' && balanceResult.inputs.length > 0){
             //We store actual keyIndex for next faster search and transaction
-            tableKeyIndex.data = balanceResult.inputs[0].keyIndex;
-            db.update("keyIndex", tableKeyIndex);
+            tableCaches = db.select("caches");
+            tableCaches.seeds[seedRound].keyIndex = balanceResult.inputs[0].keyIndex;
+
+            if(Number.isInteger(balanceResult.totalBalance)){
+                tableCaches.seeds[seedRound].balance = balanceResult.totalBalance;
+                cacheBalance = 0;
+                for (var i in tableCaches.seeds) {
+                    cacheBalance += tableCaches.seeds[i].balance;
+                }
+                config.debug && console.log(new Date().toISOString()+" Total balance: " + cacheBalance);
+            } else {
+                cacheBalance = " Running syncing of database, please wait! "
+            }
+
+            db.update("caches", tableCaches);
             config.debug && console.log(new Date().toISOString()+' Balance: store actual keyIndex: '+balanceResult.inputs[0].keyIndex);
-        }
-        config.debug && console.log(new Date().toISOString()+" Faucet balance: " + balanceResult.totalBalance);
-        if(Number.isInteger(balanceResult.totalBalance)){
-            cacheBalance = balanceResult.totalBalance;
-        } else {
-            cacheBalance = " Running syncing of database, please wait! "
         }
         balanceWorker.kill();
     });
@@ -1108,59 +1124,21 @@ io.on('connection', function (socket) {
     });
     //When external compute complete PoW, send hash transaction to all clients
     socket.on('newWithdrawalConfirmation', function (data) {
-        tableCache = db.select("cache");
-        tableCache.bundleHash = data.bundle;
-        db.update("cache", tableCache);
+        tableCaches = db.select("caches");
+        tableCaches.seeds[seedRound].bundleHash = data.bundle;
+        db.update("caches", tableCaches);
 
         if(powInProgress){
             config.debug && console.log(new Date().toISOString()+' Success: External computing unit finished PoW');
             config.debug && console.timeEnd('external-pow-time');
         }
-
-        roundQueueTimer();
         powInProgress = false;
         emitGlobalValues("" ,"bundle");
-        // Repeeat PoW, spamm it
-        var checkAddressIsReattachable = db.select("cache").isReattachable;
-        if (checkAddressIsReattachable !== null) {
-            iota.api.isReattachable(checkAddressIsReattachable, function (errors, Bool) {
-                // If false, transaction was confirmed
-                if (!Bool) {
-                    //Withdraw user balance only if node is synced (node is only), transactions can be pending and look as confirmed when node is offline
-                    if (!balanceInProgress) {
-                        var taskIsNodeSynced = function () {
-                            isNodeSynced("isReattachable", function repeat(error, synced) {
-                                if (synced) {
-                                    // We are done, next in queue can go
-                                    config.debug && console.log(new Date().toISOString() + " Success: Transaction is confirmed: " + checkAddressIsReattachable);
-                                    db.select("cache").resetUserBalanceList.forEach(function (user) {
-                                        withdrawUserBalance(user.name, user.amount);
-                                    });
-                                    // We are done, unset the cache values
-                                    resetPayout();
-                                    // Get and emit new balance after transaction confirmation
-                                    getRates("balance");
-                                } else {
-                                    setTimeout(function () {
-                                        taskIsNodeSynced();
-                                    }, 30000);
-                                }
-                            });
-                        };
-                        taskIsNodeSynced();
-                    }
-                } else {
-                    callPoW();
-                }
-            });
-        } else {
-            config.debug && console.log(new Date().toISOString() + " Error: inputAddressConfirm: " + checkAddressIsReattachable);
-        }
     });
     socket.on('boostRequest', function () {
         //socket.emit('announcement', "Boost is disabled. Thank you for your help");
-        if(db.select("cache").trytes.length !== 0){
-        socket.emit("boostAttachToTangle", db.select("cache").trytes, function(confirmation){
+        if(db.select("caches").seeds[seedRound].trytes.length !== 0){
+        socket.emit("boostAttachToTangle", db.select("caches").seeds[seedRound].trytes, function(confirmation){
             if(confirmation.success == true){
                 config.debug && console.log(new Date().toISOString()+ " "+socket.id+' emit attachToTangle to client success');
             } else {
@@ -1178,7 +1156,7 @@ function emitGlobalValues(socket, type){
     var emitData = {};
     switch(String(type)) {
         case "all":
-            emitData = {balance: cacheBalance, bundle: db.select("cache").bundleHash, count: sockets.length, iotaUSD:iotaUSD, totalIotaPerSecond: totalIotaPerSecond, hashIotaRatio: getHashIotaRatio(), confirmedSpams: confirmedSpams};
+            emitData = {balance: cacheBalance, bundle: db.select("caches").seeds[seedRound].bundleHash, count: sockets.length, iotaUSD:iotaUSD, totalIotaPerSecond: totalIotaPerSecond, hashIotaRatio: getHashIotaRatio(), confirmedSpams: confirmedSpams};
             break;
         case "online":
             emitData = {count: sockets.length};
@@ -1187,7 +1165,7 @@ function emitGlobalValues(socket, type){
             emitData = {balance: cacheBalance};
             break;
         case "bundle":
-            emitData = {bundle: db.select("cache").bundleHash};
+            emitData = {bundle: db.select("caches").seeds[seedRound].bundleHash};
             break;
         case "confirmedSpams":
             emitData = {confirmedSpams: confirmedSpams};

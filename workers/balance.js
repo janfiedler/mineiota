@@ -13,7 +13,7 @@ process.on('message', function(data) {
         'start': parseInt(data.keyIndex),
         'security': parseInt(2)
     };
-    iota.api.getInputs(config.iota.seed, options, function(error, inputsData) {
+    iota.api.getInputs(data.seed, options, function(error, inputsData) {
         if (error) {
             process.send(error);
         } else {
