@@ -639,6 +639,7 @@ function switchToNextSeedPosition(){
         seedRound = 0;
     }
     config.debug && console.log(new Date().toISOString() + ' Next seed position: ' + seedRound);
+    getBalance();
 }
 
 // Reset total on coinhive.com on request
