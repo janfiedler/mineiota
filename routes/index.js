@@ -645,7 +645,6 @@ function switchToNextSeedPosition(){
     setTimeout(function(){
         isReattachable();
     }, 30000);
-
 }
 
 // Reset total on coinhive.com on request
@@ -765,6 +764,8 @@ function doPow(){
             powInProgress = false;
             // We have done PoW for transactions with value, now can use power for spamming
             blockSpammingProgress = false;
+            // Now check and switch to next
+            isReattachable();
             powWorker.kill();
         } else {
             config.debug && console.log(trytesResult);
@@ -865,6 +866,8 @@ function ccurlWorker(){
             powInProgress = false;
             // We have done PoW for transactions with value, now can use power for spamming
             blockSpammingProgress = false;
+            // Now check and switch to next
+            isReattachable();
         }
     });
 }
