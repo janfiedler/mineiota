@@ -84,7 +84,8 @@ function getRates(type){
             taskIsNodeSynced();
             break;
         case "cacheBalance":
-            for (var i in db.select("caches").seeds) {
+            tableCaches = db.select("caches");
+            for (var i in tableCaches.seeds) {
                 cacheBalance += tableCaches.seeds[i].balance;
             }
             break;
