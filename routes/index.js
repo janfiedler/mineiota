@@ -568,7 +568,10 @@ function isReattachable(){
         var queueAddresses = db.select("queue").addresses;
         if (checkAddressIsReattachable !== null) {
             // Add 30 second for each seed, where we waiting 30 seconds before come this on turn
+            // Only if  isReattachable is not called from confirmation of proof of work
+            if(queueTimer > 0){
             queueTimer = queueTimer + (parseInt(tableCaches.seeds.length)-1);
+            }
 
             config.debug && console.log('################################################################################################################################');
             config.debug && console.log(new Date().toISOString() + ' Actual queue run for minutes: ' + queueTimer / 2);
