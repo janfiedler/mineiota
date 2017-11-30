@@ -221,8 +221,8 @@ if(getCaches.seeds.length === 0){
     db.update("caches", getCaches);
 }
 
-//#BLOCK QUEUE OF WITHDRAWAL FUNCTION
-setInterval(function () {
+//#BLOCK OF WITHDRAWAL FUNCTION
+function startNewPayout(){
     var queueAddresses = db.select("queue").addresses;
     tableCaches = db.select("caches");
 
@@ -265,7 +265,7 @@ setInterval(function () {
         taskIsNodeSynced();
 
     }
-}, 1000);
+}
 
 function getUserForPayout(){
     var queueAddresses = db.select("queue").addresses;
@@ -560,14 +560,6 @@ function sendQueuePosition(socket){
     }
 }
 
-//#BLOCK CHECKING CONFIRMED TRANSACTION BEFORE SEND NEW ROUND
-var waitConfirm;
-// When server is restarted, check if we have already running waiting on confirmation transaction
-/*
-if(db.select("caches").seeds[seedRound].isReattachable !== null){
-    setInterval(isReattachable, 30000);
-}
-*/
 isReattachable();
 // Checking if transaction is confirmed
 function isReattachable(){
@@ -596,6 +588,8 @@ function isReattachable(){
                                     });
                                     // We are done, unset the cache values
                                     resetPayout();
+                                    // Start new payout
+                                    startNewPayout();
                                     // Get and emit new balance after transaction confirmation
                                     getRates("balance");
                                 } else {
@@ -614,7 +608,7 @@ function isReattachable(){
                     resetPayout();
                 } else if (isInteger(parseInt(queueTimer) / (parseInt(config.reattachAfterMinutes)*parseInt(2))) && parseInt(queueTimer) !== 0) {
                     // Add one minute to queue timer
-                    // On every 15 minutes in queue, do PoW again
+                    // On every X minutes in queue, do PoW again
                     config.debug && console.log(new Date().toISOString() + ' Failed: Do PoW again ');
                     // Check if node is synced, this also call proof of work
                     callPoW();
@@ -629,6 +623,7 @@ function isReattachable(){
             });
         } else {
             config.debug && console.log(new Date().toISOString() + " Error: inputAddressConfirm: " + checkAddressIsReattachable);
+            switchToNextSeedPosition();
         }
     }
 }
@@ -641,7 +636,10 @@ function switchToNextSeedPosition(){
         seedRound = 0;
     }
     config.debug && console.log(new Date().toISOString() + ' Next seed position: ' + seedRound);
-    getBalance();
+    if(getCaches.seeds[seedRound].balance === 0){
+        getBalance();
+    }
+
     setTimeout(function(){
         isReattachable();
     }, 30000);
@@ -672,9 +670,6 @@ function withdrawUserBalance(name, amount){
 }
 
 function resetPayout(){
-    // STOP with setInterval until is called again
-    clearInterval(waitConfirm);
-
     // Finished or canceled transaction, can use power resources again for transaction / spam
     powInProgress = false;
     blockSpammingProgress = false;
