@@ -750,7 +750,7 @@ function callPoW(){
                 } else {
                     setTimeout(function(){
                         taskIsNodeSynced();
-                    }, 30000);
+                    }, 1000);
                 }
             });
         };
