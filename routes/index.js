@@ -164,6 +164,54 @@ function getNumberOfOutputsInBundle(){
     }
 }
 
+function cleanQueueDuplicity(){
+    var addresses = db.select("queue").addresses;
+    console.log("Count in queue (removing duplicity): " + addresses.length);
+    var address = "";
+    for (var i in addresses) {
+        if(address !== addresses[i]){
+            address = addresses[i];
+            var firstMatch = address;
+            // Remove duplicity requests from whole queue
+            var tempNewQueue = {"type":[],"ids":[],"addresses":[],"value":[]};
+            // Read until actual queue is not empty
+            tableQueue = db.select("queue");
+            var whileLength = tableQueue.type.length;
+            while (whileLength > 0){
+                var tempType = tableQueue.type.shift();
+                var tempId = tableQueue.ids.shift();
+                var tempAddress = tableQueue.addresses.shift();
+                var tempValue = tableQueue.value.shift();
+                // If actual address for withdrawal isnt in queue, add it again to tempNewQueue
+                if(firstMatch !== "" && firstMatch == tempAddress){
+                    tempNewQueue.type.push(tempType);
+                    tempNewQueue.ids.push(tempId);
+                    tempNewQueue.addresses.push(tempAddress);
+                    tempNewQueue.value.push(tempValue);
+                    firstMatch = "";
+                } else if(address !== tempAddress){
+                    tempNewQueue.type.push(tempType);
+                    tempNewQueue.ids.push(tempId);
+                    tempNewQueue.addresses.push(tempAddress);
+                    tempNewQueue.value.push(tempValue);
+                } else if(tempValue !== 0){
+                    // For custom payout allow multiple in queue
+                    tempNewQueue.type.push(tempType);
+                    tempNewQueue.ids.push(tempId);
+                    tempNewQueue.addresses.push(tempAddress);
+                    tempNewQueue.value.push(tempValue);
+                } else {
+                    //console.log(new Date().toISOString() + " Failed: Duplicate payout request in queue: " + tempAddress);
+                }
+                whileLength--;
+            }
+            // Update final tempNewQueue to queue table
+            db.update("queue", tempNewQueue);
+        }
+    }
+    console.log("New count in queue: " + db.select("queue").addresses.length);
+
+}
 //#BLOCK QUEUE OF WITHDRAWAL FUNCTION
 setInterval(function () {
     var queueAddresses = db.select("queue").addresses;
@@ -175,6 +223,8 @@ setInterval(function () {
         tableCache.withdrawalInProgress = true;
         db.update("cache", tableCache);
 
+        // Clean duplicity from queue before new payout
+        cleanQueueDuplicity();
         getUserForPayout();
     } else if (queueAddresses.length === 0 && cacheBalance > 0 && hashIotaRatio > 0 && !db.select("cache").withdrawalInProgress && !balanceInProgress && !blockSpammingProgress && config.automaticWithdrawal){
         // If queue is empty, make auto withdrawal to unpaid users
