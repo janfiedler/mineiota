@@ -1041,10 +1041,10 @@ io.on('connection', function (socket) {
                 if(result === 1){
                     fn({done:1,publicKey:config.coinhive.publicKey,username:data.address});
                 } else if(result === 0) {
-                    console.log('Warning: '+address+' is attached, but not confirmed to tangle');
+                    //console.log('Warning: '+address+' is attached, but not confirmed to tangle');
                     fn({done:0,publicKey:config.coinhive.publicKey,username:data.address});
                 } else if(result === -1) {
-                    console.log('Error login: '+address+' is not attached and confirmed to tangle');
+                    console.log('Error login: '+address+' is not attached to tangle');
                     fn({done:-1});
                 }
             });
