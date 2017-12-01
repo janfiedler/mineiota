@@ -647,7 +647,7 @@ function isReattachable(){
         } else {
             config.debug && console.log(new Date().toISOString() + " Error: inputAddressConfirm: " + checkAddressIsReattachable);
             //Start new payout to next when is new seed added and have balance
-            if(tableCaches.seeds[seedRound].isReattachable > 0){
+            if(tableCaches.seeds[seedRound].balance > 0){
                 startNewPayout();
             } else {
                 switchToNextSeedPosition();
