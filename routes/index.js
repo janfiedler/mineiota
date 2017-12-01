@@ -747,7 +747,7 @@ function resetUserBalance(userName){
             config.debug && console.log(new Date().toISOString()+" Reset coinhive.com balance result:");
             config.debug && console.log(body);
         } else {
-            config.debug && console.log(new Date().toISOString()+" Error response status code withdrawUserBalance");
+            config.debug && console.log(new Date().toISOString()+" Error response status code resetUserBalance");
         }
     });
 }
