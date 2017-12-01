@@ -715,6 +715,7 @@ function resetPayout(){
     tableCaches = db.select("caches");
     // Reset minutes before next queue, waiting on transaction confirmation
     tableCaches.seeds[seedRound].queueTimer = 0;
+    tableCaches.seeds[seedRound].nextQueueTimer = 0;
     // Set state for withdrawal progress
     tableCaches.seeds[seedRound].withdrawalInProgress = false;
     // input address from balance to checking if transaction is confirmed
