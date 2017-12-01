@@ -70,18 +70,18 @@ function getRates(type){
         case "balance":
             // Set balanceInProgress also here for block spamming, until balance progress is done
             balanceInProgress = true;
-            var taskIsNodeSynced = function () {
+            var taskIsNodeSyncedForGetRates = function () {
                 isNodeSynced("getRates (balance)", function (error, synced) {
                     if (synced) {
                         getBalance();
                     } else {
                         setTimeout(function () {
-                            taskIsNodeSynced();
+                            taskIsNodeSyncedForGetRates();
                         }, 5000);
                     }
                 });
             };
-            taskIsNodeSynced();
+            taskIsNodeSyncedForGetRates();
             break;
         case "cacheBalance":
             tableCaches = db.select("caches");
@@ -265,18 +265,18 @@ function startNewPayout(){
         //Experiment with spamming mode when no withdrawal
         blockSpammingProgress = true;
 
-        var taskIsNodeSynced = function () {
+        var taskIsNodeSyncedForSpamming = function () {
             isNodeSynced("doSpamming", function repeat(error, result) {
                 if(result){
                     doSpamming();
                 } else {
                     setTimeout(function(){
-                        taskIsNodeSynced();
+                        taskIsNodeSyncedForSpamming();
                     }, 5000);
                 }
             });
         };
-        taskIsNodeSynced();
+        taskIsNodeSyncedForSpamming();
 
     } else if(tableCaches.seeds[seedRound].balance === 0){
         config.debug && console.log(new Date().toISOString() + " Warning: This seed have zero balance, switch to next");
@@ -632,7 +632,7 @@ function isReattachable(){
                 if (!Bool) {
                     //Withdraw user balance only if node is synced (node is only), transactions can be pending and look as confirmed when node is offline
                     if (!balanceInProgress) {
-                        var taskIsNodeSynced = function () {
+                        var taskIsNodeSyncedForIsReattachable = function () {
                             isNodeSynced("isReattachable", function repeat(error, synced) {
                                 if (synced) {
                                     // We are done, next in queue can go
@@ -687,13 +687,14 @@ function isReattachable(){
                                     loopUserBalanceList(tableCaches.seeds[seedRound].resetUserBalanceList);
 
                                 } else {
+                                    config.debug && console.log(new Date().toISOString() + " Failed: Node is not synced for isReattachable");
                                     setTimeout(function () {
-                                        taskIsNodeSynced();
-                                    }, 1000);
+                                        taskIsNodeSyncedForIsReattachable();
+                                    }, 5000);
                                 }
                             });
                         };
-                        taskIsNodeSynced();
+                        taskIsNodeSyncedForIsReattachable();
                     }
                 } else if (queueTimer > nextQueueTimer && parseInt(queueTimer) !== 0) {
                     // Set and save next queue timer
@@ -811,7 +812,7 @@ function resetPayout(){
 function callPoW(){
     if(!powInProgress){
         powInProgress = true;
-        var taskIsNodeSynced = function () {
+        var taskIsNodeSyncedForCallPoW = function () {
             isNodeSynced("callPoW", function repeat(error, synced) {
                 if (synced) {
                     if(config.externalCompute && externalComputeSocket.length > 0){
@@ -828,12 +829,12 @@ function callPoW(){
                     }
                 } else {
                     setTimeout(function(){
-                        taskIsNodeSynced();
+                        taskIsNodeSyncedForCallPoW();
                     }, 1000);
                 }
             });
         };
-        taskIsNodeSynced();
+        taskIsNodeSyncedForCallPoW();
     }
 }
 
