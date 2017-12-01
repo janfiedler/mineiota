@@ -684,7 +684,6 @@ function isReattachable(){
                                     loopUserBalanceList(tableCaches.seeds[seedRound].resetUserBalanceList);
 
                                 } else {
-                                    config.debug && console.log(new Date().toISOString() + " Failed: Node is not synced for isReattachable");
                                     setTimeout(function () {
                                         taskIsNodeSyncedForIsReattachable();
                                     }, 5000);
