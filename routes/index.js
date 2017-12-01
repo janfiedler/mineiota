@@ -232,6 +232,7 @@ function startNewPayout(){
     tableCaches = db.select("caches");
 
     if(hashIotaRatio === 0){
+        config.debug && console.log(new Date().toISOString()+" Wating on getRates, hashIotaRatio");
         getRates("price");
         setTimeout(function(){
             startNewPayout();
@@ -363,6 +364,7 @@ function getUserBalance(address, type, customValue){
                         //Check duplicity only for withdrawal, not custom transactions
                         if(customValue === 0) {
                             // If getTopUsers called from getUserBalance fill rest of space for manual payments, checking for duplicate
+                            console.log(new Date().toISOString() + " Checking for duplicates");
                             db.select("caches").seeds[seedRound].resetUserBalanceList.forEach(function (user) {
                                 if (user.name === address) {
                                     console.log(new Date().toISOString() + " Failed: Duplicate payout in resetUserBalanceList" + address);
@@ -375,6 +377,7 @@ function getUserBalance(address, type, customValue){
                         }
 
                         if(!skipDuplicate) {
+                            console.log(new Date().toISOString() + " No duplicates, can continue");
                             var tmpAddress = getAddressWithoutChecksum(address);
                             if(tmpAddress !== null){
                                 isAddressAttachedToTangle(tmpAddress, function (error, result) {
