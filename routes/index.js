@@ -690,6 +690,8 @@ function resetUserBalance(userName){
         if (!error && response.statusCode === 200) {
             config.debug && console.log(new Date().toISOString()+" Reset coinhive.com balance result:");
             config.debug && console.log(body);
+        } else {
+            config.debug && console.log(new Date().toISOString()+" Error response status code withdrawUserBalance");
         }
     });
 }
@@ -703,6 +705,8 @@ function withdrawUserBalance(name, amount){
             }
             config.debug && console.log(new Date().toISOString()+" Withdraw coinhive.com balance result:");
             config.debug && console.log(body);
+        } else {
+            config.debug && console.log(new Date().toISOString()+" Error response status code withdrawUserBalance");
         }
     });
 }
