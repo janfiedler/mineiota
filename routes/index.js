@@ -238,14 +238,6 @@ function startNewPayout(){
         }, 5000);
     }
 
-    //On first start, wait until hashIotaRatio have value
-    while(hashIotaRatio === 0){
-        config.debug && console.log(new Date().toISOString()+" Wating on getRates, hashIotaRatio");
-        getRates("price");
-        setTimeout(function(){
-        }, 5000);
-    }
-
     if(queueAddresses.length > 0 && tableCaches.seeds[seedRound].balance > 0 && hashIotaRatio > 0 && !tableCaches.seeds[seedRound].withdrawalInProgress && !balanceInProgress && !blockSpammingProgress) {
 
         // Set withdraw is in progress
