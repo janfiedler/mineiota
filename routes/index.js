@@ -400,9 +400,7 @@ function getUserBalance(address, type, customValue){
                                             // If address is not in tangle, reset username on coinhive to get it out from top users
                                             resetUserBalance(address);
                                         }
-                                        //Failed: Duplicate payout in resetUserBalanceList, skipping!
-                                        countUsersForPayout = parseInt(countUsersForPayout) - 1;
-                                        // Go to next
+                                        // Success, we are done, go to next
                                         getUserForPayout();
                                     }
                                 });
