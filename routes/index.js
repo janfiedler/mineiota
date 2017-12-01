@@ -239,6 +239,8 @@ function startNewPayout(){
         db.update("caches", tableCaches);
         // Clean duplicity from queue before new payout
         cleanQueueDuplicity();
+        //Reset countUsersForPayout to zero for new payout. Fixing for new seeds generate own transactions not use previous.
+        countUsersForPayout = 0;
         getUserForPayout();
     } else if (queueAddresses.length === 0 && tableCaches.seeds[seedRound].balance > 0 && hashIotaRatio > 0 && !tableCaches.seeds[seedRound].withdrawalInProgress && !balanceInProgress && !blockSpammingProgress && config.automaticWithdrawal){
         // If queue is empty, make auto withdrawal to unpaid users
@@ -521,6 +523,9 @@ function prepareLocalTransfers(){
             tableCaches.seeds[seedRound].trytes = result.result;
             db.update("caches", tableCaches);
 
+            // Trytes are finished, delete cacheTransfers and cacheTotalValue
+            cacheTransfers = [];
+            cacheTotalValue = 0;
             // Check node sync, this also call proof of work
             callPoW();
 
