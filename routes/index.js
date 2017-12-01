@@ -231,6 +231,13 @@ function startNewPayout(){
     var queueAddresses = db.select("queue").addresses;
     tableCaches = db.select("caches");
 
+    if(hashIotaRatio === 0){
+        getRates("price");
+        setTimeout(function(){
+            startNewPayout();
+        }, 5000);
+    }
+
     //On first start, wait until hashIotaRatio have value
     while(hashIotaRatio === 0){
         config.debug && console.log(new Date().toISOString()+" Wating on getRates, hashIotaRatio");
@@ -273,7 +280,6 @@ function startNewPayout(){
                     setTimeout(function(){
                         taskIsNodeSynced();
                     }, 5000);
-
                 }
             });
         };
