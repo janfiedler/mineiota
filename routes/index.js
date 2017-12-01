@@ -233,8 +233,9 @@ function startNewPayout(){
 
     //On first start, wait until hashIotaRatio have value
     while(hashIotaRatio === 0){
+        config.debug && console.log(new Date().toISOString()+" Wating on getRates, hashIotaRatio");
+        getRates("price");
         setTimeout(function(){
-            getRates("price");
         }, 5000);
     }
 
