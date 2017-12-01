@@ -641,47 +641,44 @@ function isReattachable(){
                                     // Withdraw from user balance with callback
                                     var x = 0;
                                     var loopUserBalanceList = function(arr) {
-                                        var withdrawBalance = function () {
-                                            withdrawFromUserBalance(arr[x].name, arr[x].amount, function (error, result) {
-                                                if (result === 1) {
-                                                    // Done continue, set x to next item
-                                                    x++;
-                                                    // any more items in array? continue loop
-                                                    if (x < arr.length) {
-                                                        loopUserBalanceList(arr);
-                                                    } else {
-                                                        //Continue to new payout
-                                                        // Unset the cache values
-                                                        resetPayout();
-                                                        // Start new payout
-                                                        startNewPayout();
-                                                        // Get and emit new balance after transaction confirmation
-                                                        getRates("balance");
-                                                    }
-                                                } else if (result === 0) {
-                                                    // Reset
-                                                    resetUserBalance(user.name);
-                                                    // Done continue, set x to next item
-                                                    x++;
-                                                    // any more items in array? continue loop
-                                                    if (x < arr.length) {
-                                                        loopUserBalanceList(arr);
-                                                    } else {
-                                                        //Continue to new payout
-                                                        // Unset the cache values
-                                                        resetPayout();
-                                                        // Start new payout
-                                                        startNewPayout();
-                                                        // Get and emit new balance after transaction confirmation
-                                                        getRates("balance");
-                                                    }
-                                                } else if (result === -1) {
-                                                    // Repeat if http error
-                                                    withdrawBalance();
+                                        withdrawFromUserBalance(arr[x].name, arr[x].amount, function (error, result) {
+                                            if (result === 1) {
+                                                // Done continue, set x to next item
+                                                x++;
+                                                // any more items in array? continue loop
+                                                if (x < arr.length) {
+                                                    loopUserBalanceList(arr);
+                                                } else {
+                                                    //Continue to new payout
+                                                    // Unset the cache values
+                                                    resetPayout();
+                                                    // Start new payout
+                                                    startNewPayout();
+                                                    // Get and emit new balance after transaction confirmation
+                                                    getRates("balance");
                                                 }
-                                            });
-                                        };
-                                        withdrawBalance();
+                                            } else if (result === 0) {
+                                                // Reset
+                                                resetUserBalance(arr[x].name);
+                                                // Done continue, set x to next item
+                                                x++;
+                                                // any more items in array? continue loop
+                                                if (x < arr.length) {
+                                                    loopUserBalanceList(arr);
+                                                } else {
+                                                    //Continue to new payout
+                                                    // Unset the cache values
+                                                    resetPayout();
+                                                    // Start new payout
+                                                    startNewPayout();
+                                                    // Get and emit new balance after transaction confirmation
+                                                    getRates("balance");
+                                                }
+                                            } else if (result === -1) {
+                                                // Repeat if http error
+                                                loopUserBalanceList(arr);
+                                            }
+                                        });
                                     };
 
                                     loopUserBalanceList(tableCaches.seeds[seedRound].resetUserBalanceList);
