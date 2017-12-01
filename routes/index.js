@@ -641,9 +641,8 @@ function isReattachable(){
                                     // Withdraw from user balance with callback
                                     var x = 0;
                                     var loopUserBalanceList = function(arr) {
-                                        var data = JSON.parse(arr[x]);
                                         var withdrawBalance = function () {
-                                            withdrawFromUserBalance(data.name, data.amount, function (error, result) {
+                                            withdrawFromUserBalance(arr[x].name, arr[x].amount, function (error, result) {
                                                 if (result === 1) {
                                                     // Done continue, set x to next item
                                                     x++;
