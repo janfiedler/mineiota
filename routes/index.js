@@ -577,6 +577,14 @@ function isReattachable(){
         var queueTimer = tableCaches.seeds[seedRound].queueTimer;
         var queueAddresses = db.select("queue").addresses;
 
+        if (parseInt(queueTimer) > (parseInt(config.skipAfterMinutes)*parseInt(2)) && parseInt(queueAddresses.length) > 0 && config.skipWithdrawal) {
+            // In transaction is not confirmed after 45 minutes, skipping to the next in queue
+            config.debug && console.log(new Date().toISOString() + 'Error: Transaction is not confirmed after 45 minutes, skipping to the next in queue');
+            // Error: Transaction is not confirmed, resetPayout
+            resetPayout();
+        }
+
+
         if (checkAddressIsReattachable !== null) {
             // Add 30 second for each seed, where we waiting 30 seconds before come this on turn
             // Only if  isReattachable is not called from confirmation of proof of work
@@ -623,11 +631,6 @@ function isReattachable(){
                         };
                         taskIsNodeSynced();
                     }
-                } else if (parseInt(queueTimer) > (parseInt(config.skipAfterMinutes)*parseInt(2)) && parseInt(queueAddresses.length) > 0 && config.skipWithdrawal) {
-                    // In transaction is not confirmed after 45 minutes, skipping to the next in queue
-                    config.debug && console.log(new Date().toISOString() + 'Error: Transaction is not confirmed after 45 minutes, skipping to the next in queue');
-                    // Error: Transaction is not confirmed, resetPayout
-                    resetPayout();
                 } else if (queueTimer > nextQueueTimer && parseInt(queueTimer) !== 0) {
                     // Set and save next queue timer
                     nextQueueTimer = nextQueueTimer + (parseInt(config.reattachAfterMinutes)*parseInt(2))
