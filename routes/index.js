@@ -637,15 +637,56 @@ function isReattachable(){
                                 if (synced) {
                                     // We are done, next in queue can go
                                     config.debug && console.log(new Date().toISOString() + " Success: Transaction is confirmed: " + checkAddressIsReattachable);
-                                    db.select("caches").seeds[seedRound].resetUserBalanceList.forEach(function (user) {
-                                        withdrawUserBalance(user.name, user.amount);
-                                    });
-                                    // We are done, unset the cache values
-                                    resetPayout();
-                                    // Start new payout
-                                    startNewPayout();
-                                    // Get and emit new balance after transaction confirmation
-                                    getRates("balance");
+                                    tableCaches = db.select("caches");
+                                    // Withdraw from user balance with callback
+                                    var x = 0;
+                                    var loopUserBalanceList = function(arr) {
+                                        var data = JSON.parse(arr[x]);
+                                        var withdrawBalance = function () {
+                                            withdrawFromUserBalance(data.name, data.amount, function (error, result) {
+                                                if (result === 1) {
+                                                    // Done continue, set x to next item
+                                                    x++;
+                                                    // any more items in array? continue loop
+                                                    if (x < arr.length) {
+                                                        loopUserBalanceList(arr);
+                                                    } else {
+                                                        //Continue to new payout
+                                                        // Unset the cache values
+                                                        resetPayout();
+                                                        // Start new payout
+                                                        startNewPayout();
+                                                        // Get and emit new balance after transaction confirmation
+                                                        getRates("balance");
+                                                    }
+                                                } else if (result === 0) {
+                                                    // Reset
+                                                    resetUserBalance(user.name);
+                                                    // Done continue, set x to next item
+                                                    x++;
+                                                    // any more items in array? continue loop
+                                                    if (x < arr.length) {
+                                                        loopUserBalanceList(arr);
+                                                    } else {
+                                                        //Continue to new payout
+                                                        // Unset the cache values
+                                                        resetPayout();
+                                                        // Start new payout
+                                                        startNewPayout();
+                                                        // Get and emit new balance after transaction confirmation
+                                                        getRates("balance");
+                                                    }
+                                                } else if (result === -1) {
+                                                    // Repeat if http error
+                                                    withdrawBalance();
+                                                }
+                                            });
+                                        };
+                                        withdrawBalance();
+                                    };
+
+                                    loopUserBalanceList(tableCaches.seeds[seedRound].resetUserBalanceList);
+
                                 } else {
                                     setTimeout(function () {
                                         taskIsNodeSynced();
@@ -713,18 +754,24 @@ function resetUserBalance(userName){
         }
     });
 }
+
 // Withdraw from user balance on coinhive when transaction is confirmed
-function withdrawUserBalance(name, amount){
+function withdrawFromUserBalance(name, amount, callback){
     request.post({url: "https://api.coinhive.com/user/withdraw", form: {"secret": config.coinhive.privateKey, "name":name, "amount":amount}}, function(error, response, body) {
         if (!error && response.statusCode === 200) {
             // If insufficient funds, reset balance to clear user.
-            if(body.error === "insufficent_funds"){
-                resetUserBalance(name);
+            var data = JSON.parse(body);
+            if(data.error === "insufficent_funds"){
+                //resetUserBalance(name);
+                callback(null, 0);
+            }else {
+                callback(null, 1);
             }
             config.debug && console.log(new Date().toISOString()+" Withdraw coinhive.com balance result:");
             config.debug && console.log(body);
         } else {
             config.debug && console.log(new Date().toISOString()+" Error response status code withdrawUserBalance");
+            callback(null, -1);
         }
     });
 }
