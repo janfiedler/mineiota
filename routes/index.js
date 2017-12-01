@@ -359,7 +359,7 @@ function getUserBalance(address, type, customValue){
                             // If getTopUsers called from getUserBalance fill rest of space for manual payments, checking for duplicate
                             db.select("caches").seeds[seedRound].resetUserBalanceList.forEach(function (user) {
                                 if (user.name === address) {
-                                    console.log(new Date().toISOString() + " Failed: Duplicate payout in resetUserBalanceList, skipping! " + address);
+                                    console.log(new Date().toISOString() + " Failed: Duplicate payout in resetUserBalanceList" + address);
                                     // When duplicate do not add more, skip this user and continue
                                       skipDuplicate = true;
                                 }
@@ -398,13 +398,13 @@ function getUserBalance(address, type, customValue){
                                     }
                                 });
                             } else {
-                                //Failed: Address have wrong checksum, skipping!
+                                config.debug && console.log(new Date().toISOString()+" Failed: Address have wrong checksum, skipping!");
                                 countUsersForPayout = parseInt(countUsersForPayout) - 1;
                                 // Go to next
                                 getUserForPayout();
                             }
                         } else {
-                            //Failed: Duplicate payout in resetUserBalanceList, skipping!
+                            config.debug && console.log(new Date().toISOString()+" Duplicate, skipping!");
                             countUsersForPayout = parseInt(countUsersForPayout) - 1;
                             // Go to next
                             getUserForPayout();
