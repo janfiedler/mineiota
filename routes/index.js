@@ -407,19 +407,19 @@ function getUserBalance(address, type, customValue){
                             } else {
                                 config.debug && console.log(new Date().toISOString()+" Failed: Address have wrong checksum, skipping!");
                                 countUsersForPayout = parseInt(countUsersForPayout) - 1;
-                                // Go to next
+                                // Failed, go to next
                                 getUserForPayout();
                             }
                         } else {
                             config.debug && console.log(new Date().toISOString()+" Duplicate, skipping!");
                             countUsersForPayout = parseInt(countUsersForPayout) - 1;
-                            // Go to next
+                            // Failed, go to next
                             getUserForPayout();
                         }
                     } else {
                         config.debug && console.log(new Date().toISOString()+" Failed: getUserBalance no hashes for payout! Skipping");
                         countUsersForPayout = parseInt(countUsersForPayout) - 1;
-                        // Go to next
+                        // Failed, go to next
                         getUserForPayout();
                     }
                 } else {
@@ -821,8 +821,10 @@ function doPow(){
             powInProgress = false;
             // We have done PoW for transactions with value, now can use power for spamming
             blockSpammingProgress = false;
-            // Now check and switch to next
-            isReattachable();
+            // Waiting on caches save to file, than check and switch to next
+            setTimeout(function(){
+                isReattachable();
+            }, 5000);
             powWorker.kill();
         } else {
             config.debug && console.log(trytesResult);
@@ -923,8 +925,10 @@ function ccurlWorker(){
             powInProgress = false;
             // We have done PoW for transactions with value, now can use power for spamming
             blockSpammingProgress = false;
-            // Now check and switch to next
-            isReattachable();
+            // Waiting on caches save to file, than check and switch to next
+            setTimeout(function(){
+                isReattachable();
+            }, 5000);
         }
     });
 }
