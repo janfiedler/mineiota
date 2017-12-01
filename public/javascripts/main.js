@@ -203,6 +203,12 @@ $( document ).ready(function() {
                     $('#mySpinner').hide();
                     $('#setAddress').show();
                     $('#iotaAddress').val('');
+                } else if(data.done === -2){
+                    $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;Failed! Your address have wrong checksum, use another address!</div>');
+                    // Hide spinner, user is accepted
+                    $('#mySpinner').hide();
+                    $('#setAddress').show();
+                    $('#iotaAddress').val('');
                 } else if (data.done === 0) {
                     console.log("Warning! Your address is attached, but not confirmed to tangle!");
                     startMining();

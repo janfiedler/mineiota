@@ -370,30 +370,39 @@ function getUserBalance(address, type, customValue){
 
                         if(!skipDuplicate) {
                             var tmpAddress = getAddressWithoutChecksum(address);
-                            isAddressAttachedToTangle(tmpAddress, function (error, result) {
-                                console.log(new Date().toISOString() + " Begin: isAddressAttachedToTangle");
-                                if(error !== null){
-                                    console.log(new Date().toISOString() + " Error: isAddressAttachedToTangle!");
-                                    console.log(error);
-                                    // Repeat
-                                    getUserBalance(address, type, customValue);
-                                } else {
-                                    if (result === 1 || result === 0) {
-                                        console.log(new Date().toISOString() + " isAddressAttachedToTangle result: " + result + " customValue: " + customValue);
-                                        if (customValue === 0) {
-                                            addTransferToCache(type, address, valuePayout, data.balance);
-                                        } else {
-                                            addTransferToCache(type, address, customValue, Math.floor(parseFloat(customValue / hashIotaRatio)));
-                                        }
+                            if(tmpAddress !== null){
+                                isAddressAttachedToTangle(tmpAddress, function (error, result) {
+                                    console.log(new Date().toISOString() + " Begin: isAddressAttachedToTangle");
+                                    if(error !== null){
+                                        console.log(new Date().toISOString() + " Error: isAddressAttachedToTangle!");
+                                        console.log(error);
+                                        // Repeat
+                                        getUserBalance(address, type, customValue);
+                                    } else {
+                                        if (result === 1 || result === 0) {
+                                            console.log(new Date().toISOString() + " isAddressAttachedToTangle result: " + result + " customValue: " + customValue);
+                                            if (customValue === 0) {
+                                                addTransferToCache(type, address, valuePayout, data.balance);
+                                            } else {
+                                                addTransferToCache(type, address, customValue, Math.floor(parseFloat(customValue / hashIotaRatio)));
+                                            }
 
-                                    } else if (result === -1) {
-                                        // If address is not in tangle, reset username on coinhive to get it out from top users
-                                        resetUserBalance(address);
+                                        } else if (result === -1) {
+                                            // If address is not in tangle, reset username on coinhive to get it out from top users
+                                            resetUserBalance(address);
+                                        }
+                                        //Failed: Duplicate payout in resetUserBalanceList, skipping!
+                                        countUsersForPayout = parseInt(countUsersForPayout) - 1;
+                                        // Go to next
+                                        getUserForPayout();
                                     }
-                                    // Go to next
-                                    getUserForPayout();
-                                }
-                            });
+                                });
+                            } else {
+                                //Failed: Address have wrong checksum, skipping!
+                                countUsersForPayout = parseInt(countUsersForPayout) - 1;
+                                // Go to next
+                                getUserForPayout();
+                            }
                         } else {
                             //Failed: Duplicate payout in resetUserBalanceList, skipping!
                             countUsersForPayout = parseInt(countUsersForPayout) - 1;
@@ -434,26 +443,28 @@ function getUserBalance(address, type, customValue){
 
 function addTransferToCache(type, address, amount, hashes){
     var withoutChecksumAddress = getAddressWithoutChecksum(address);
-    if(type === "MANUAL" || type === "AUTOMATIC"){
-        cacheTransfers.push({
-            "address" : withoutChecksumAddress,
-            "value"  : parseInt(amount),
-            "message" : "MINEIOTADOTCOM9"+type+"9PAYOUT",
-            'tag': "MINEIOTADOTCOM"
-        });
-    } else {
-        cacheTransfers.push({
-            "address" : withoutChecksumAddress,
-            "value"  : parseInt(amount),
-            "message" : "MINEIOTADOTCOM9CUSTOM9PAYOUT",
-            'tag': type
-        });
-    }
+        if(withoutChecksumAddress !== null){
+        if(type === "MANUAL" || type === "AUTOMATIC"){
+            cacheTransfers.push({
+                "address" : withoutChecksumAddress,
+                "value"  : parseInt(amount),
+                "message" : "MINEIOTADOTCOM9"+type+"9PAYOUT",
+                'tag': "MINEIOTADOTCOM"
+            });
+        } else {
+            cacheTransfers.push({
+                "address" : withoutChecksumAddress,
+                "value"  : parseInt(amount),
+                "message" : "MINEIOTADOTCOM9CUSTOM9PAYOUT",
+                'tag': type
+            });
+        }
 
-    //After transaction is confirmed, withdraw coinhive.com balance
-    tableCaches = db.select("caches");
-    tableCaches.seeds[seedRound].resetUserBalanceList.push({"name":address,"amount":hashes});
-    db.update("caches", tableCaches);
+        //After transaction is confirmed, withdraw coinhive.com balance
+        tableCaches = db.select("caches");
+        tableCaches.seeds[seedRound].resetUserBalanceList.push({"name":address,"amount":hashes});
+        db.update("caches", tableCaches);
+    }
 }
 
 function getTopUsers(count){
@@ -631,7 +642,7 @@ function isReattachable(){
                                 } else {
                                     setTimeout(function () {
                                         taskIsNodeSynced();
-                                    }, 30000);
+                                    }, 1000);
                                 }
                             });
                         };
@@ -973,6 +984,7 @@ function getAddressWithoutChecksum(address){
         } else {
             console.log(new Date().toISOString()+" invalid checksum: ");
             console.log(address);
+            address = null;
         }
     }
     return address;
@@ -1072,17 +1084,22 @@ io.on('connection', function (socket) {
     socket.on('login', function (data, fn) {
         if(isAddress(data.address)){
             var address = getAddressWithoutChecksum(data.address);
-            isAddressAttachedToTangle(address, function(error, result) {
-                if(result === 1){
-                    fn({done:1,publicKey:config.coinhive.publicKey,username:data.address});
-                } else if(result === 0) {
-                    //console.log('Warning: '+address+' is attached, but not confirmed to tangle');
-                    fn({done:0,publicKey:config.coinhive.publicKey,username:data.address});
-                } else if(result === -1) {
-                    console.log('Error login: '+address+' is not attached to tangle');
-                    fn({done:-1});
-                }
-            });
+            if(address !== null){
+                isAddressAttachedToTangle(address, function(error, result) {
+                    if(result === 1){
+                        fn({done:1,publicKey:config.coinhive.publicKey,username:data.address});
+                    } else if(result === 0) {
+                        //console.log('Warning: '+address+' is attached, but not confirmed to tangle');
+                        fn({done:0,publicKey:config.coinhive.publicKey,username:data.address});
+                    } else if(result === -1) {
+                        console.log('Error login: '+address+' is not attached to tangle');
+                        fn({done:-1});
+                    }
+                });
+            } else {
+                console.log('Error login: '+address+' wrong checksum');
+                fn({done:-2});
+            }
         } else {
             fn(false);
         }
