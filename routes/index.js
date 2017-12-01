@@ -598,6 +598,7 @@ function isReattachable(){
 
             config.debug && console.log('################################################################################################################################');
             config.debug && console.log(new Date().toISOString() + ' Actual queue run for minutes: ' + queueTimer / 2);
+            config.debug && console.log(new Date().toISOString() + ' Next queue run for minutes: ' + nextQueueTimer / 2);
             config.debug && console.log(new Date().toISOString() + ' Seed position: ' + seedRound);
             config.debug && console.log(new Date().toISOString() + ' Check bundle confirmation: ' + tableCaches.seeds[seedRound].bundleHash);
             tableCaches.seeds[seedRound].queueTimer = queueTimer;
@@ -667,7 +668,7 @@ function switchToNextSeedPosition(){
     if(seedRound > (parseInt(getCaches.seeds.length)-1)){
         seedRound = 0;
     }
-    config.debug && console.log(new Date().toISOString() + ' Next seed position: ' + seedRound);
+    config.debug && console.log(new Date().toISOString() + ' Next seed position: ' + seedRound + " after 30 seconds");
     if(getCaches.seeds[seedRound].balance === 0){
         getRates("balance");
     }
