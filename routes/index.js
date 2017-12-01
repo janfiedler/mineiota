@@ -589,7 +589,7 @@ function isReattachable(){
             // Add 30 second for each seed, where we waiting 30 seconds before come this on turn
             // Only if  isReattachable is not called from confirmation of proof of work
 
-            var nextQueueTimer =  tableCaches.seeds[seedRound].nextQueueTimer;
+            var nextQueueTimer = tableCaches.seeds[seedRound].nextQueueTimer;
             if(queueTimer > 0){
                 queueTimer = queueTimer + (parseInt(tableCaches.seeds.length)-1);
             } else {
@@ -716,7 +716,8 @@ function resetPayout(){
     tableCaches = db.select("caches");
     // Reset minutes before next queue, waiting on transaction confirmation
     tableCaches.seeds[seedRound].queueTimer = 0;
-    tableCaches.seeds[seedRound].nextQueueTimer = 0;
+    // Set next queue timer when we start new payout
+    tableCaches.seeds[seedRound].nextQueueTimer = parseInt(config.reattachAfterMinutes)*parseInt(2);
     // Set state for withdrawal progress
     tableCaches.seeds[seedRound].withdrawalInProgress = false;
     // input address from balance to checking if transaction is confirmed
