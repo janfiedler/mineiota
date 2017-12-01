@@ -216,7 +216,7 @@ if(getCaches.seeds.length === 0){
     var getSeeds = config.iota.seeds.seeds;
     for (var i in getSeeds) {
         // Fill temp data
-        var tempSeed = {"seed":null,"keyIndex":0,"balance":0,"withdrawalInProgress":false,"isReattachable":null,"resetUserBalanceList":[],"trytes":[],"bundleHash":null,"queueTimer":0,"nextQueueTimer":0};
+        var tempSeed = {"seed":null,"keyIndex":0,"balance":0,"withdrawalInProgress":false,"isReattachable":null,"resetUserBalanceList":[],"trytes":[],"bundleHash":null,"queueTimer":0,"nextQueueTimer":40};
         tempSeed.seed = getSeeds[i].seed;
         tempSeed.keyIndex = getSeeds[i].keyIndex;
         // Add temp data to JSON array
