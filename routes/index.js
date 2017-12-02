@@ -376,7 +376,7 @@ function getUserBalance(address, type, customValue){
                             tableCaches.seeds.forEach(function(seed) {
                                 seed.resetUserBalanceList.forEach(function(user) {
                                     if(user.name === address){
-                                        console.log(new Date().toISOString() + " Failed: Duplicate payout in resetUserBalanceList" + address);
+                                        console.log(new Date().toISOString() + " Failed: Duplicate payout in resetUserBalanceList: " + address);
                                         // When duplicate do not add more, skip this user and continue
                                         skipDuplicate = true;
                                     }
@@ -421,7 +421,7 @@ function getUserBalance(address, type, customValue){
                                 getUserForPayout();
                             }
                         } else {
-                            config.debug && console.log(new Date().toISOString()+" Duplicate, skipping!");
+                            config.debug && console.log(new Date().toISOString()+" Warning: Duplicate, skipping! countUsersForPayout - 1");
                             countUsersForPayout = parseInt(countUsersForPayout) - 1;
                             // Failed, go to next
                             getUserForPayout();
@@ -910,7 +910,10 @@ function doPow(){
             blockSpammingProgress = false;
             // Go to next seed
             seedRound++;
-            isReattachable();
+            // Wait 5 seconds after PoW is done, before skip to next seed
+            setTimeout(function(){
+                isReattachable();
+            }, 5000);
 
             powWorker.kill();
         } else {
