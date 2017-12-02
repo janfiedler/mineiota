@@ -903,7 +903,6 @@ function doPow(){
             db.update("caches", tableCaches);
 
             config.debug && console.log("Success: bundle from attached transactions " + trytesResult[0].bundle);
-            emitGlobalValues("", "bundle");
 
             powInProgress = false;
             // We have done PoW for transactions with value, now can use power for spamming
@@ -912,6 +911,7 @@ function doPow(){
             seedRound++;
             // Wait 5 seconds after PoW is done, before skip to next seed
             setTimeout(function(){
+                emitGlobalValues("", "bundle");
                 isReattachable();
             }, 5000);
 
