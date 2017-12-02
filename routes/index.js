@@ -728,6 +728,7 @@ function withdrawUserBalance(){
             });
             } else {
                 //Skipp because username is undefined
+                config.debug && console.log(new Date().toISOString() + " Error: Skipp because username is undefined ");
                 x++;
                 loopUserBalanceList(arr);
             }
@@ -736,6 +737,7 @@ function withdrawUserBalance(){
         loopUserBalanceList(tableCaches.seeds[seedRound].resetUserBalanceList);
     } else {
         // There is nobody for withdraw payout from coinhive
+        config.debug && console.log(new Date().toISOString() + " Warning: There is nobody for withdraw payout from coinhive.com ");
         // Unset the cache values
         resetPayout();
         // Start new payout
