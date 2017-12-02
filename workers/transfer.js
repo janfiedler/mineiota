@@ -26,10 +26,11 @@ process.on('message', function(data) {
             'security': parseInt(2),
             'threshold': parseInt(totalValue)
         };
+        console.log(options);
         // Get inputs for next transaction by options
         iota.api.getInputs(seed, options, function (error, inputsData) {
             if (error) {
-                process.send(error);
+                process.send({status: "error", result: error});
                 config.debug && console.log(error);
             } else {
                 // Loop or keyIndex, get new index from last
