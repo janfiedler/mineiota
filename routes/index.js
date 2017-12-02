@@ -448,7 +448,7 @@ function getUserBalance(address, type, customValue){
                         });
 
                         tableCaches.seeds[seedRound].balance = 0;
-                        db.update("queue", tableCaches);
+                        db.update("caches", tableCaches);
 
                         prepareLocalTransfers();
                         } else {
