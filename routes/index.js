@@ -843,7 +843,7 @@ function callPoW(){
 }
 
 function doPow(){
-    config.debug && console.log(new Date().toISOString()+" PoW worker started");
+    config.debug && console.log(new Date().toISOString()+" Info: Node PoW worker started");
     config.debug && console.time('pow-time');
     // Worker for get IOTA balance in interval
     var powWorker = cp.fork('workers/pow.js');
