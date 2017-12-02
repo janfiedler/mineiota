@@ -665,8 +665,7 @@ function isReattachable(){
                     withdrawUserBalance();
                     resetPayout();
                     startNewPayout();
-                }
-                if(tableCaches.seeds[seedRound].balance > 0){
+                } else if(tableCaches.seeds[seedRound].balance > 0){
                     resetPayout();
                     startNewPayout();
                 } else {
