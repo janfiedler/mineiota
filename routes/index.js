@@ -372,12 +372,15 @@ function getUserBalance(address, type, customValue){
                         if(customValue === 0) {
                             // If getTopUsers called from getUserBalance fill rest of space for manual payments, checking for duplicate
                             console.log(new Date().toISOString() + " Checking for duplicates");
-                            db.select("caches").seeds[seedRound].resetUserBalanceList.forEach(function (user) {
-                                if (user.name === address) {
-                                    console.log(new Date().toISOString() + " Failed: Duplicate payout in resetUserBalanceList" + address);
-                                    // When duplicate do not add more, skip this user and continue
-                                      skipDuplicate = true;
-                                }
+                            tableCaches = db.select("caches");
+                            tableCaches.seeds.forEach(function(seed) {
+                                seed.resetUserBalanceList.forEach(function(user) {
+                                    if(user.name === address){
+                                        console.log(new Date().toISOString() + " Failed: Duplicate payout in resetUserBalanceList" + address);
+                                        // When duplicate do not add more, skip this user and continue
+                                        skipDuplicate = true;
+                                    }
+                                });
                             });
                         } else {
                             console.log(new Date().toISOString() + " Custom payout, skipping check duplicates!");
@@ -505,13 +508,15 @@ function getTopUsers(count){
                     var skipDuplicate = false;
                     // If getTopUsers called from getUserBalance fill rest of space for manual payments, checking for duplicate
                     if(count < parseInt(getNumberOfOutputsInBundle())){
-                        db.select("caches").seeds[seedRound].resetUserBalanceList.forEach(function(user) {
-                            if(user.name === address){
-                                console.log(new Date().toISOString()+" Duplicate payout in resetUserBalanceList, skipping! " + address);
-                                // When duplicate do not add more, skip this user and continue
-                                countUsersForPayout = parseInt(countUsersForPayout) - 1;
-                                skipDuplicate = true;
-                            }
+                        tableCaches = db.select("caches");
+                        tableCaches.seeds.forEach(function(seed) {
+                            seed.resetUserBalanceList.forEach(function(user) {
+                                if(user.name === address){
+                                    console.log(new Date().toISOString()+" Duplicate payout in resetUserBalanceList, skipping! " + address);
+                                    // When duplicate do not add more, skip this user and continue
+                                    skipDuplicate = true;
+                                }
+                            });
                         });
                     }
                     if(!skipDuplicate){
@@ -527,6 +532,9 @@ function getTopUsers(count){
                         // Send to client position in queue
                         db.update("queue", tableQueue);
                         tableQueue = null;
+                    } else {
+                        config.debug && console.log(new Date().toISOString()+" countUsersForPayout - 1!");
+                        countUsersForPayout = parseInt(countUsersForPayout) - 1;
                     }
                 } else {
                     console.log(new Date().toISOString()+" User without balance for payout, skipping!");
