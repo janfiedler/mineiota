@@ -1007,14 +1007,19 @@ function isAddressAttachedToTangle(address, callback) {
                 callback(null, -1);
             } else {
                 iota.api.getLatestInclusion(success, function (errors, success) {
-                    for (var i = 0, len = success.length; i < len; i++) {
-                        if(success[i] === true){
-                            callback(null, 1);
-                            return;
+                    if(success !== null){
+                        for (var i = 0, len = success.length; i < len; i++) {
+                            if(success[i] === true){
+                                callback(null, 1);
+                                return;
+                            }
                         }
+                        //config.debug && console.log(new Date().toISOString()+' Warning: '+address+' is attached, but not confirmed to tangle! ');
+                        callback(null, 0);
+                    } else {
+                        // Problem with node?
+                        callback(null, -2);
                     }
-                    //config.debug && console.log(new Date().toISOString()+' Warning: '+address+' is attached, but not confirmed to tangle! ');
-                    callback(null, 0);
                 })
             }
         } else {
