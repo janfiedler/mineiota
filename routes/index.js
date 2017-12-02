@@ -438,13 +438,25 @@ function getUserBalance(address, type, customValue){
                         prepareLocalTransfers();
                     } else {
                         console.log(new Date().toISOString()+" No more balance for next payout!");
+                        tableCaches = db.select("caches");
+                        if(cacheTotalValue > 0){
                         cacheTransfers.push({
                             "address" : config.remainingBalanceAddress,
-                            "value"  : parseInt(db.select("caches").seeds[seedRound].balance),
+                            "value"  : parseInt(tableCaches.seeds[seedRound].balance),
                             "message" : "MINEIOTADOTCOM9AUTOMATIC9PAYOUT",
                             'tag': "MINEIOTADOTCOM"
                         });
+
+                        tableCaches.seeds[seedRound].balance = 0;
+                        db.update("queue", tableCaches);
+
                         prepareLocalTransfers();
+                        } else {
+                            tableCaches = db.select("caches");
+                            tableCaches.seeds[seedRound].balance = 0;
+                            db.update("queue", tableCaches);
+                            switchToNextSeedPosition();
+                        }
                     }
                 }
             }
