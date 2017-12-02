@@ -542,16 +542,8 @@ function prepareLocalTransfers(){
             // Select actual tableCache
             tableCaches = db.select("caches");
             tableCaches.seeds[seedRound].trytes = result.result;
-            db.update("caches", tableCaches);
-
-            // Trytes are finished, delete cacheTransfers and cacheTotalValue
-            cacheTransfers = [];
-            cacheTotalValue = 0;
-            // Check node sync, this also call proof of work
-            callPoW();
 
             //We store actual keyIndex for next faster search and transaction
-            tableCaches = db.select("caches");
             if(typeof result.keyIndex !== 'undefined'){
                 tableCaches.seeds[seedRound].keyIndex = result.keyIndex;
                 config.debug && console.log(new Date().toISOString()+' Transfer: store actual keyIndex: '+result.keyIndex);
@@ -564,6 +556,15 @@ function prepareLocalTransfers(){
                 resetPayout();
             }
             db.update("caches", tableCaches);
+
+            // Trytes are finished, delete cacheTransfers and cacheTotalValue
+            cacheTransfers = [];
+            cacheTotalValue = 0;
+            // Wait on save file
+            setTimeout(function () {
+                callPoW();
+            }, 5000);
+
         } else if (result.status == "error"){
             config.debug && console.log(result);
             // Error transfer worker start again
@@ -597,131 +598,122 @@ function sendQueuePosition(socket){
 isReattachable();
 // Checking if transaction is confirmed
 function isReattachable(){
-    if(!powInProgress) {
-        tableCaches = db.select("caches");
-        var checkAddressIsReattachable = tableCaches.seeds[seedRound].isReattachable;
-        var queueTimer = tableCaches.seeds[seedRound].queueTimer;
-        var queueAddresses = db.select("queue").addresses;
+    isNodeSynced("isReattachable", function repeat(error, synced) {
+        if(!powInProgress && synced) {
+            tableCaches = db.select("caches");
+            var checkAddressIsReattachable = tableCaches.seeds[seedRound].isReattachable;
+            var queueTimer = tableCaches.seeds[seedRound].queueTimer;
+            var queueAddresses = db.select("queue").addresses;
 
-        if (parseInt(queueTimer) > (parseInt(config.skipAfterMinutes)*parseInt(2)) && parseInt(queueAddresses.length) > 0 && config.skipWithdrawal) {
-            // In transaction is not confirmed after 45 minutes, skipping to the next in queue
-            config.debug && console.log(new Date().toISOString() + 'Error: Transaction is not confirmed after 45 minutes, skipping to the next in queue');
-            // Error: Transaction is not confirmed, resetPayout
-            resetPayout();
-        }
-
-
-        if (checkAddressIsReattachable !== null) {
-            // Add 30 second for each seed, where we waiting 30 seconds before come this on turn
-            // Only if  isReattachable is not called from confirmation of proof of work
-
-            var nextQueueTimer = tableCaches.seeds[seedRound].nextQueueTimer;
-            if(queueTimer > 0){
-                queueTimer = queueTimer + (parseInt(tableCaches.seeds.length)-1);
-            } else {
-                queueTimer++;
+            if (parseInt(queueTimer) > (parseInt(config.skipAfterMinutes)*parseInt(2)) && parseInt(queueAddresses.length) > 0 && config.skipWithdrawal) {
+                // In transaction is not confirmed after 45 minutes, skipping to the next in queue
+                config.debug && console.log(new Date().toISOString() + 'Error: Transaction is not confirmed after 45 minutes, skipping to the next in queue');
+                // Error: Transaction is not confirmed, resetPayout
+                resetPayout();
             }
 
-            config.debug && console.log('################################################################################################################################');
-            config.debug && console.log(new Date().toISOString() + ' Actual queue run for minutes: ' + queueTimer / 2);
-            config.debug && console.log(new Date().toISOString() + ' Next queue run for minutes: ' + nextQueueTimer / 2);
-            config.debug && console.log(new Date().toISOString() + ' Seed position: ' + seedRound);
-            config.debug && console.log(new Date().toISOString() + ' Check bundle confirmation: ' + tableCaches.seeds[seedRound].bundleHash);
-            tableCaches.seeds[seedRound].queueTimer = queueTimer;
-            db.update("caches", tableCaches);
+            if (checkAddressIsReattachable !== null) {
+                // Add 30 second for each seed, where we waiting 30 seconds before come this on turn
+                // Only if  isReattachable is not called from confirmation of proof of work
 
-            iota.api.isReattachable(checkAddressIsReattachable, function (errors, Bool) {
-                // If false, transaction was confirmed
-                if (!Bool) {
-                    //Withdraw user balance only if node is synced (node is only), transactions can be pending and look as confirmed when node is offline
-                    if (!balanceInProgress) {
-                        var taskIsNodeSyncedForIsReattachable = function () {
-                            isNodeSynced("isReattachable", function repeat(error, synced) {
-                                if (synced) {
-                                    // We are done, next in queue can go
-                                    config.debug && console.log(new Date().toISOString() + " Success: Transaction is confirmed: " + checkAddressIsReattachable);
-                                    tableCaches = db.select("caches");
-                                    // Withdraw from user balance with callback
-                                    var x = 0;
-                                    var loopUserBalanceList = function(arr) {
-                                        withdrawFromUserBalance(arr[x].name, arr[x].amount, function (error, result) {
-                                            if (result === 1) {
-                                                // Done continue, set x to next item
-                                                x++;
-                                                // any more items in array? continue loop
-                                                if (x < arr.length) {
-                                                    loopUserBalanceList(arr);
-                                                } else {
-                                                    //Continue to new payout
-                                                    // Unset the cache values
-                                                    resetPayout();
-                                                    // Start new payout
-                                                    startNewPayout();
-                                                    // Get and emit new balance after transaction confirmation
-                                                    getRates("balance");
-                                                }
-                                            } else if (result === 0) {
-                                                // Reset
-                                                resetUserBalance(arr[x].name);
-                                                // Done continue, set x to next item
-                                                x++;
-                                                // any more items in array? continue loop
-                                                if (x < arr.length) {
-                                                    loopUserBalanceList(arr);
-                                                } else {
-                                                    //Continue to new payout
-                                                    // Unset the cache values
-                                                    resetPayout();
-                                                    // Start new payout
-                                                    startNewPayout();
-                                                    // Get and emit new balance after transaction confirmation
-                                                    getRates("balance");
-                                                }
-                                            } else if (result === -1) {
-                                                // Repeat if http error
-                                                loopUserBalanceList(arr);
-                                            }
-                                        });
-                                    };
+                var nextQueueTimer = tableCaches.seeds[seedRound].nextQueueTimer;
+                if(queueTimer > 0){
+                    queueTimer = queueTimer + (parseInt(tableCaches.seeds.length)-1);
+                } else {
+                    queueTimer++;
+                }
 
-                                    loopUserBalanceList(tableCaches.seeds[seedRound].resetUserBalanceList);
+                config.debug && console.log('################################################################################################################################');
+                config.debug && console.log(new Date().toISOString() + ' Actual queue run for minutes: ' + queueTimer / 2);
+                config.debug && console.log(new Date().toISOString() + ' Next queue run for minutes: ' + nextQueueTimer / 2);
+                config.debug && console.log(new Date().toISOString() + ' Seed position: ' + seedRound);
+                config.debug && console.log(new Date().toISOString() + ' Check bundle confirmation: ' + tableCaches.seeds[seedRound].bundleHash);
+                tableCaches.seeds[seedRound].queueTimer = queueTimer;
+                db.update("caches", tableCaches);
 
-                                } else {
-                                    setTimeout(function () {
-                                        taskIsNodeSyncedForIsReattachable();
-                                    }, 5000);
+                iota.api.isReattachable(checkAddressIsReattachable, function (errors, Bool) {
+                    // If false, transaction was confirmed
+                    if (!Bool) {
+                        // We are done, next in queue can go
+                        config.debug && console.log(new Date().toISOString() + " Success: Transaction is confirmed: " + checkAddressIsReattachable);
+                        tableCaches = db.select("caches");
+                        // Withdraw from user balance with callback
+                        var x = 0;
+                        var loopUserBalanceList = function(arr) {
+                            withdrawFromUserBalance(arr[x].name, arr[x].amount, function (error, result) {
+                                if (result === 1) {
+                                    // Done continue, set x to next item
+                                    x++;
+                                    // any more items in array? continue loop
+                                    if (x < arr.length) {
+                                        loopUserBalanceList(arr);
+                                    } else {
+                                        //Continue to new payout
+                                        // Unset the cache values
+                                        resetPayout();
+                                        // Start new payout
+                                        startNewPayout();
+                                        // Get and emit new balance after transaction confirmation
+                                        getRates("balance");
+                                    }
+                                } else if (result === 0) {
+                                    // Reset
+                                    resetUserBalance(arr[x].name);
+                                    // Done continue, set x to next item
+                                    x++;
+                                    // any more items in array? continue loop
+                                    if (x < arr.length) {
+                                        loopUserBalanceList(arr);
+                                    } else {
+                                        //Continue to new payout
+                                        // Unset the cache values
+                                        resetPayout();
+                                        // Start new payout
+                                        startNewPayout();
+                                        // Get and emit new balance after transaction confirmation
+                                        getRates("balance");
+                                    }
+                                } else if (result === -1) {
+                                    // Repeat if http error
+                                    loopUserBalanceList(arr);
                                 }
                             });
                         };
-                        taskIsNodeSyncedForIsReattachable();
+
+                        loopUserBalanceList(tableCaches.seeds[seedRound].resetUserBalanceList);
+                    } else if (queueTimer > nextQueueTimer && parseInt(queueTimer) !== 0) {
+                        // Set and save next queue timer
+                        nextQueueTimer = nextQueueTimer + (parseInt(config.reattachAfterMinutes)*parseInt(2))
+                        tableCaches.seeds[seedRound].nextQueueTimer = nextQueueTimer;
+                        db.update("caches", tableCaches);
+                        // Add one minute to queue timer
+                        // On every X minutes in queue, do PoW again
+                        config.debug && console.log(new Date().toISOString() + ' Failed: Do PoW again ');
+                        // Check if node is synced, this also call proof of work
+                        callPoW();
+                    } else {
+                        config.debug && console.log(new Date().toISOString() + ' Miners online: ' + sockets.length);
+                        config.debug && console.log(new Date().toISOString() + ' Transactions in queue: ' + queueAddresses.length);
+                        switchToNextSeedPosition();
                     }
-                } else if (queueTimer > nextQueueTimer && parseInt(queueTimer) !== 0) {
-                    // Set and save next queue timer
-                    nextQueueTimer = nextQueueTimer + (parseInt(config.reattachAfterMinutes)*parseInt(2))
-                    tableCaches.seeds[seedRound].nextQueueTimer = nextQueueTimer;
-                    db.update("caches", tableCaches);
-                    // Add one minute to queue timer
-                    // On every X minutes in queue, do PoW again
-                    config.debug && console.log(new Date().toISOString() + ' Failed: Do PoW again ');
-                    // Check if node is synced, this also call proof of work
-                    callPoW();
+                });
+            } else {
+                config.debug && console.log(new Date().toISOString() + " Error: inputAddressConfirm: " + checkAddressIsReattachable);
+                //Start new payout to next when is new seed added and have balance
+                if(tableCaches.seeds[seedRound].balance > 0){
+                    startNewPayout();
                 } else {
-                    config.debug && console.log(new Date().toISOString() + ' Miners online: ' + sockets.length);
-                    config.debug && console.log(new Date().toISOString() + ' Transactions in queue: ' + queueAddresses.length);
                     switchToNextSeedPosition();
                 }
-            });
-        } else {
-            config.debug && console.log(new Date().toISOString() + " Error: inputAddressConfirm: " + checkAddressIsReattachable);
-            //Start new payout to next when is new seed added and have balance
-            if(tableCaches.seeds[seedRound].balance > 0){
-                startNewPayout();
-            } else {
-                switchToNextSeedPosition();
-            }
 
+            }
+        } else {
+            setTimeout(function(){
+                config.debug && console.log(new Date().toISOString() + " Error: node is not synced, wait 10 and repeat ");
+                isReattachable();
+            }, 10000);
         }
-    }
+    });
 }
 
 function switchToNextSeedPosition(){
