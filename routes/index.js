@@ -640,51 +640,8 @@ function isReattachable(){
                     if (!Bool) {
                         // We are done, next in queue can go
                         config.debug && console.log(new Date().toISOString() + " Success: Transaction is confirmed: " + checkAddressIsReattachable);
-                        tableCaches = db.select("caches");
-                        // Withdraw from user balance with callback
-                        var x = 0;
-                        var loopUserBalanceList = function(arr) {
-                            withdrawFromUserBalance(arr[x].name, arr[x].amount, function (error, result) {
-                                if (result === 1) {
-                                    // Done continue, set x to next item
-                                    x++;
-                                    // any more items in array? continue loop
-                                    if (x < arr.length) {
-                                        loopUserBalanceList(arr);
-                                    } else {
-                                        //Continue to new payout
-                                        // Unset the cache values
-                                        resetPayout();
-                                        // Start new payout
-                                        startNewPayout();
-                                        // Get and emit new balance after transaction confirmation
-                                        getRates("balance");
-                                    }
-                                } else if (result === 0) {
-                                    // Reset
-                                    resetUserBalance(arr[x].name);
-                                    // Done continue, set x to next item
-                                    x++;
-                                    // any more items in array? continue loop
-                                    if (x < arr.length) {
-                                        loopUserBalanceList(arr);
-                                    } else {
-                                        //Continue to new payout
-                                        // Unset the cache values
-                                        resetPayout();
-                                        // Start new payout
-                                        startNewPayout();
-                                        // Get and emit new balance after transaction confirmation
-                                        getRates("balance");
-                                    }
-                                } else if (result === -1) {
-                                    // Repeat if http error
-                                    loopUserBalanceList(arr);
-                                }
-                            });
-                        };
+                        withdrawUserBalance();
 
-                        loopUserBalanceList(tableCaches.seeds[seedRound].resetUserBalanceList);
                     } else if (queueTimer > nextQueueTimer && parseInt(queueTimer) !== 0) {
                         // Set and save next queue timer
                         nextQueueTimer = nextQueueTimer + (parseInt(config.reattachAfterMinutes)*parseInt(2))
@@ -704,7 +661,13 @@ function isReattachable(){
             } else {
                 config.debug && console.log(new Date().toISOString() + " Error: inputAddressConfirm: " + checkAddressIsReattachable);
                 //Start new payout to next when is new seed added and have balance
+                if(tableCaches.seeds[seedRound].resetUserBalanceList.length > 0){
+                    withdrawUserBalance();
+                    resetPayout();
+                    startNewPayout();
+                }
                 if(tableCaches.seeds[seedRound].balance > 0){
+                    resetPayout();
                     startNewPayout();
                 } else {
                     switchToNextSeedPosition();
@@ -718,6 +681,54 @@ function isReattachable(){
             }, 10000);
         }
     });
+}
+
+function withdrawUserBalance(){
+    tableCaches = db.select("caches");
+    // Withdraw from user balance with callback
+    var x = 0;
+    var loopUserBalanceList = function(arr) {
+        withdrawFromUserBalance(arr[x].name, arr[x].amount, function (error, result) {
+            if (result === 1) {
+                // Done continue, set x to next item
+                x++;
+                // any more items in array? continue loop
+                if (x < arr.length) {
+                    loopUserBalanceList(arr);
+                } else {
+                    //Continue to new payout
+                    // Unset the cache values
+                    resetPayout();
+                    // Start new payout
+                    startNewPayout();
+                    // Get and emit new balance after transaction confirmation
+                    getRates("balance");
+                }
+            } else if (result === 0) {
+                // Reset
+                resetUserBalance(arr[x].name);
+                // Done continue, set x to next item
+                x++;
+                // any more items in array? continue loop
+                if (x < arr.length) {
+                    loopUserBalanceList(arr);
+                } else {
+                    //Continue to new payout
+                    // Unset the cache values
+                    resetPayout();
+                    // Start new payout
+                    startNewPayout();
+                    // Get and emit new balance after transaction confirmation
+                    getRates("balance");
+                }
+            } else if (result === -1) {
+                // Repeat if http error
+                loopUserBalanceList(arr);
+            }
+        });
+    };
+
+    loopUserBalanceList(tableCaches.seeds[seedRound].resetUserBalanceList);
 }
 
 function switchToNextSeedPosition(){
@@ -863,10 +874,10 @@ function doPow(){
             powInProgress = false;
             // We have done PoW for transactions with value, now can use power for spamming
             blockSpammingProgress = false;
-            // Waiting on caches save to file, than check and switch to next
-            setTimeout(function(){
-                isReattachable();
-            }, 5000);
+            // Go to next seed
+            seedRound++;
+            isReattachable();
+
             powWorker.kill();
         } else {
             config.debug && console.log(trytesResult);
@@ -967,10 +978,9 @@ function ccurlWorker(){
             powInProgress = false;
             // We have done PoW for transactions with value, now can use power for spamming
             blockSpammingProgress = false;
-            // Waiting on caches save to file, than check and switch to next
-            setTimeout(function(){
-                isReattachable();
-            }, 5000);
+            // Switch to next seed
+            seedRound++;
+            isReattachable();
         }
     });
 }
