@@ -228,11 +228,12 @@ if(getCaches.seeds.length === 0){
 
 //#BLOCK OF WITHDRAWAL FUNCTION
 function startNewPayout(){
+    config.debug && console.log(new Date().toISOString()+" Info: startNewPayout() started");
     var queueAddresses = db.select("queue").addresses;
     tableCaches = db.select("caches");
 
     if(queueAddresses.length > 0 && tableCaches.seeds[seedRound].balance > 0 && hashIotaRatio > 0 && !tableCaches.seeds[seedRound].withdrawalInProgress && !balanceInProgress && !blockSpammingProgress) {
-
+        config.debug && console.log(new Date().toISOString()+" Info: getUserForPayout() started");
         // Set withdraw is in progress
         blockSpammingProgress = true;
         tableCaches.seeds[seedRound].withdrawalInProgress = true;
@@ -243,6 +244,7 @@ function startNewPayout(){
         countUsersForPayout = 0;
         getUserForPayout();
     } else if (queueAddresses.length === 0 && tableCaches.seeds[seedRound].balance > 0 && hashIotaRatio > 0 && !tableCaches.seeds[seedRound].withdrawalInProgress && !balanceInProgress && !blockSpammingProgress && config.automaticWithdrawal){
+        config.debug && console.log(new Date().toISOString()+" Info: getTopUsers() started");
         // If queue is empty, make auto withdrawal to unpaid users
         config.debug && console.log(new Date().toISOString()+" Queue is empty, make auto withdrawal to unpaid users");
 
@@ -253,6 +255,7 @@ function startNewPayout(){
 
         getTopUsers(getNumberOfOutputsInBundle());
     } else if (!balanceInProgress && !powInProgress && !blockSpammingProgress && config.spamming){
+        config.debug && console.log(new Date().toISOString()+" Info: doSpamming() started");
         // When PoW is sleeping (waiting on confirmation of value transactions), use it for spamming
         //Experiment with spamming mode when no withdrawal
         blockSpammingProgress = true;
@@ -282,6 +285,7 @@ function startNewPayout(){
         config.debug && console.log(new Date().toISOString()+" Info: Waiting on getRates, hashIotaRatio is undefined");
         getRates("price");
         setTimeout(function(){
+            config.debug && console.log(new Date().toISOString()+" Info: Calling startNewPayout() again");
             startNewPayout();
         }, 30000);
     }
