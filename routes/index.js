@@ -564,15 +564,14 @@ function prepareLocalTransfers(){
             // Trytes are finished, delete cacheTransfers and cacheTotalValue
             cacheTransfers = [];
             cacheTotalValue = 0;
-            // Wait on save file
-            setTimeout(function () {
-                callPoW();
-            }, 5000);
+             callPoW();
+
 
         } else if (result.status == "error"){
             config.debug && console.log(result);
-            // Error transfer worker start again
+            // Error transfer worker switch to next seed
             resetPayout();
+            switchToNextSeedPosition()
         }
         transferWorker.kill();
     });
