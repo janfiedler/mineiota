@@ -231,14 +231,6 @@ function startNewPayout(){
     var queueAddresses = db.select("queue").addresses;
     tableCaches = db.select("caches");
 
-    if(hashIotaRatio === 0){
-        config.debug && console.log(new Date().toISOString()+" Wating on getRates, hashIotaRatio");
-        getRates("price");
-        setTimeout(function(){
-            startNewPayout();
-        }, 5000);
-    }
-
     if(queueAddresses.length > 0 && tableCaches.seeds[seedRound].balance > 0 && hashIotaRatio > 0 && !tableCaches.seeds[seedRound].withdrawalInProgress && !balanceInProgress && !blockSpammingProgress) {
 
         // Set withdraw is in progress
@@ -281,6 +273,17 @@ function startNewPayout(){
     } else if(tableCaches.seeds[seedRound].balance === 0){
         config.debug && console.log(new Date().toISOString() + " Warning: This seed have zero balance, switch to next");
         switchToNextSeedPosition();
+    } else if (queueAddresses.length === 0 && tableCaches.seeds[seedRound].balance > 0 && hashIotaRatio > 0 && !tableCaches.seeds[seedRound].withdrawalInProgress && !powInProgress){
+        config.debug && console.log(new Date().toISOString() + " Info: Queue is empty, waiting 30 seconds for new attempt");
+        setTimeout(function(){
+            startNewPayout();
+        }, 30000);
+    } else if(hashIotaRatio === 0){
+        config.debug && console.log(new Date().toISOString()+" Info: Waiting on getRates, hashIotaRatio is undefined");
+        getRates("price");
+        setTimeout(function(){
+            startNewPayout();
+        }, 30000);
     }
 }
 
