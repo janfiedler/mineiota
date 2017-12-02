@@ -740,10 +740,8 @@ function withdrawUserBalance(){
         config.debug && console.log(new Date().toISOString() + " Warning: There is nobody for withdraw payout from coinhive.com ");
         // Unset the cache values
         resetPayout();
-        // Start new payout
-        startNewPayout();
-        // Get and emit new balance after transaction confirmation
-        getRates("balance");
+        // Switch to another seed
+        switchToNextSeedPosition();
     }
 }
 
