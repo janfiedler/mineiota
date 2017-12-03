@@ -1,6 +1,7 @@
 var config = {
     development: {
         debug: true,
+        maintenance: false,
         port: 3000,
         url: 'http://127.0.0.1',
         outputsInBundle: 10,
@@ -32,6 +33,7 @@ var config = {
     },
     production: {
         debug: false,
+        maintenance: false,
         port: 3000,
         url: 'https://yourwebsite.com',
         outputsInBundle: 10,

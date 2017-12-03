@@ -618,8 +618,15 @@ function sendQueuePosition(socket){
         emitToAll('queueTotal', {total: queueIds.length});
     }
 }
+if(!config.maintenance){
+    isReattachable();
+} else {
+    setInterval(function () {
+        emitToAll('announcement', "Site is in maintenance, restarting iri node...")
+    }, 30000);
 
-isReattachable();
+}
+
 // Checking if transaction is confirmed
 function isReattachable(){
     isNodeSynced("isReattachable", function repeat(error, synced) {
@@ -1347,7 +1354,7 @@ function emitGlobalValues(socket, type){
     if(socket !== ""){
         socket.emit('globalValues', emitData);
     } else {
-        emitToAll('globalValues', emitData)
+        emitToAll('globalValues', emitData);
     }
 }
 function emitToAll(event, data){
