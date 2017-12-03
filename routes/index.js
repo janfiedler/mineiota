@@ -335,10 +335,11 @@ function getUserForPayout(){
         config.debug && console.log(new Date().toISOString()+" getUserForPayout transactions in cacheTransfers: " + cacheTransfers.length);
         config.debug && console.log(new Date().toISOString()+" getUserForPayout total amount for prepareLocalTransfers : " + cacheTotalValue);
         // If no total value for make transfer, reset payout and start again
-        if(cacheTotalValue > 0){
+        if(cacheTotalValue > 0 && cacheTransfers.length > 0){
             prepareLocalTransfers();
         } else {
             resetPayout();
+            switchToNextSeedPosition();
         }
     }
 }
