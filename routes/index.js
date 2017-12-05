@@ -293,12 +293,12 @@ function startNewPayout(){
 }
 
 function getUserForPayout(){
-    var queueAddresses = db.select("queue").addresses;
+    tableQueue = db.select("queue");
+    var queueAddresses = tableQueue.addresses;
 
     if( db.select("caches").seeds[seedRound].withdrawalInProgress && queueAddresses.length > 0 && countUsersForPayout < parseInt(getNumberOfOutputsInBundle()) ) {
         countUsersForPayout++;
         // Remove socket id and socket for waiting list (using for get position in queue)
-        tableQueue = db.select("queue");
         var socketId = tableQueue.ids.shift();
         var requestType = tableQueue.type.shift();
         var requestValue = tableQueue.value.shift();
