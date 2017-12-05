@@ -1064,25 +1064,29 @@ function isNodeSynced(type, callback){
 function isAddressAttachedToTangle(address, callback) {
     iota.api.findTransactions({"addresses":new Array(address)}, function (errors, success) {
         if(!errors){
-            if (success.length === 0) {
-                //config.debug && console.log(new Date().toISOString()+' Error: '+address+' is not attached and confirmed to tangle! ');
-                callback(null, -1);
-            } else {
-                iota.api.getLatestInclusion(success, function (errors, success) {
-                    if(success !== null){
-                        for (var i = 0, len = success.length; i < len; i++) {
-                            if(success[i] === true){
-                                callback(null, 1);
-                                return;
+            if(typeof success !== 'undefined') {
+                if (success.length === 0) {
+                    //config.debug && console.log(new Date().toISOString()+' Error: '+address+' is not attached and confirmed to tangle! ');
+                    callback(null, -1);
+                } else {
+                    iota.api.getLatestInclusion(success, function (errors, success) {
+                        if (success !== null) {
+                            for (var i = 0, len = success.length; i < len; i++) {
+                                if (success[i] === true) {
+                                    callback(null, 1);
+                                    return;
+                                }
                             }
+                            //config.debug && console.log(new Date().toISOString()+' Warning: '+address+' is attached, but not confirmed to tangle! ');
+                            callback(null, 0);
+                        } else {
+                            // Problem with node?
+                            callback(null, -2);
                         }
-                        //config.debug && console.log(new Date().toISOString()+' Warning: '+address+' is attached, but not confirmed to tangle! ');
-                        callback(null, 0);
-                    } else {
-                        // Problem with node?
-                        callback(null, -2);
-                    }
-                })
+                    })
+                }
+            } else {
+                callback(null, -2);
             }
         } else {
             console.log(errors);
