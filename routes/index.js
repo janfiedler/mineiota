@@ -365,7 +365,8 @@ function getUserBalance(address, type, customValue){
                     var tempPayout = Math.round(customValue);
                 }
                 //Check if we have balance for transfer
-                if((parseInt(cacheTotalValue)+parseInt(tempPayout)) < db.select("caches").seeds[seedRound].balance){
+                tableCaches = db.select("caches");
+                if((parseInt(cacheTotalValue)+parseInt(tempPayout)) < tableCaches.seeds[seedRound].balance){
                     var valuePayout = tempPayout;
                     cacheTotalValue += valuePayout;
                     // We can´t payout 0 value reward
@@ -375,7 +376,6 @@ function getUserBalance(address, type, customValue){
                         if(customValue === 0) {
                             // If getTopUsers called from getUserBalance fill rest of space for manual payments, checking for duplicate
                             console.log(new Date().toISOString() + " Checking for duplicates");
-                            tableCaches = db.select("caches");
                             tableCaches.seeds.forEach(function(seed) {
                                 seed.resetUserBalanceList.forEach(function(user) {
                                     if(user.name === address){
@@ -444,7 +444,6 @@ function getUserBalance(address, type, customValue){
                         prepareLocalTransfers();
                     } else {
                         console.log(new Date().toISOString()+" No more balance for next payout!");
-                        tableCaches = db.select("caches");
                         if(cacheTotalValue > 0){
                         cacheTransfers.push({
                             "address" : config.remainingBalanceAddress,
@@ -458,7 +457,6 @@ function getUserBalance(address, type, customValue){
 
                         prepareLocalTransfers();
                         } else {
-                            tableCaches = db.select("caches");
                             tableCaches.seeds[seedRound].balance = 0;
                             db.update("caches", tableCaches);
                             switchToNextSeedPosition();
