@@ -28,6 +28,7 @@ var countUsersForPayout = 0;
 var cacheBalance = 0;
 var cacheTransfers = [];
 var cacheTotalValue = 0;
+var tempCachesBundleHash = "";
 // init table variable for file database
 var tableCaches;
 var tableQueue;
@@ -908,6 +909,7 @@ function doPow(){
         } else if(typeof trytesResult[0].bundle !== 'undefined') {
             tableCaches = db.select("caches");
             tableCaches.seeds[seedRound].bundleHash = trytesResult[0].bundle;
+            tempCachesBundleHash = trytesResult[0].bundle;
             db.update("caches", tableCaches);
 
             config.debug && console.log("Success: bundle from attached transactions " + trytesResult[0].bundle);
@@ -1010,6 +1012,7 @@ function ccurlWorker(){
         } else {
             tableCaches = db.select("caches");
             tableCaches.seeds[seedRound].bundleHash = success[0].bundle;
+            tempCachesBundleHash = success[0].bundle;
             db.update("caches", tableCaches);
 
             var theTangleOrgUrl = 'https://thetangle.org/bundle/'+success[0].bundle;
@@ -1302,6 +1305,7 @@ io.on('connection', function (socket) {
     socket.on('newWithdrawalConfirmation', function (data) {
         tableCaches = db.select("caches");
         tableCaches.seeds[seedRound].bundleHash = data.bundle;
+        tempCachesBundleHash = data.bundle;
         db.update("caches", tableCaches);
 
         if(powInProgress){
@@ -1332,7 +1336,7 @@ function emitGlobalValues(socket, type){
     var emitData = {};
     switch(String(type)) {
         case "all":
-            emitData = {balance: cacheBalance, bundle: db.select("caches").seeds[seedRound].bundleHash, count: sockets.length, iotaUSD:iotaUSD, totalIotaPerSecond: totalIotaPerSecond, hashIotaRatio: getHashIotaRatio(), confirmedSpams: confirmedSpams};
+            emitData = {balance: cacheBalance, bundle: tempCachesBundleHash, count: sockets.length, iotaUSD:iotaUSD, totalIotaPerSecond: totalIotaPerSecond, hashIotaRatio: getHashIotaRatio(), confirmedSpams: confirmedSpams};
             break;
         case "online":
             emitData = {count: sockets.length};
@@ -1341,7 +1345,7 @@ function emitGlobalValues(socket, type){
             emitData = {balance: cacheBalance};
             break;
         case "bundle":
-            emitData = {bundle: db.select("caches").seeds[seedRound].bundleHash};
+            emitData = {bundle: tempCachesBundleHash};
             break;
         case "confirmedSpams":
             emitData = {confirmedSpams: confirmedSpams};
