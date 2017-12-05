@@ -1262,12 +1262,12 @@ io.on('connection', function (socket) {
         var customValue = data.value;
         config.debug && console.log("Requesting withdraw for address: " + fullAddress);
         if(isAddress(fullAddress)){
-            var queueAddresses = db.select("queue").addresses;
+            tableQueue = db.select("queue");
+            var queueAddresses = tableQueue.addresses;
             // Check if withdrawal request inst already in queue
             if(queueAddresses.indexOf(fullAddress) >= 0 && customTag === null && customValue === null){
                 fn({done:-1,position:(parseInt(queueAddresses.indexOf(fullAddress))+parseInt(1))});
             } else  {
-                tableQueue = db.select("queue");
                 // Push type of withdrawal
                 if(typeof customTag === 'undefined' && typeof customTag === 'undefined'){
                     //TODO remove after all will be updated
