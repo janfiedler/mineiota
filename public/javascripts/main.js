@@ -180,7 +180,7 @@ $( document ).ready(function() {
             //console.log(data);
             if (data.done == 1) {
                 $("#mineSum").html("Unpaid reward: " +data.balance + " IOTA <small>($"+ (data.balance*iotaUSD).toFixed(10)+" USD)</small>");
-                $("#dateSum").html('<small>'+new Date().toISOString()+': (refresh every 10 seconds)</small>');
+                $("#dateSum").html('<small>'+new Date().toISOString()+': (refresh every 60 seconds)</small>');
             } else {
                 $("#mineSum").text(0);
             }
@@ -252,7 +252,7 @@ $( document ).ready(function() {
                         getUserActualBalance();
                         setInterval(function () {
                             getUserActualBalance();
-                        }, 10000);
+                        }, 60000);
                     });
                     miner.on('close', function (params) {
                         $('#mineLog').prepend('<div><small>'+new Date().toISOString()+':</small> &nbsp;&nbsp;The connection to the pool was closed.</div>');
