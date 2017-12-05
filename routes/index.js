@@ -294,9 +294,10 @@ function startNewPayout(){
 
 function getUserForPayout(){
     tableQueue = db.select("queue");
+    tableCaches = db.select("caches");
     var queueAddresses = tableQueue.addresses;
 
-    if( db.select("caches").seeds[seedRound].withdrawalInProgress && queueAddresses.length > 0 && countUsersForPayout < parseInt(getNumberOfOutputsInBundle()) ) {
+    if( tableCaches.seeds[seedRound].withdrawalInProgress && queueAddresses.length > 0 && countUsersForPayout < parseInt(getNumberOfOutputsInBundle()) ) {
         countUsersForPayout++;
         // Remove socket id and socket for waiting list (using for get position in queue)
         var socketId = tableQueue.ids.shift();
@@ -323,13 +324,13 @@ function getUserForPayout(){
 
         getUserBalance(userName, requestType, requestValue);
     }
-    else if(db.select("caches").seeds[seedRound].withdrawalInProgress && queueAddresses.length === 0 && countUsersForPayout < parseInt(getNumberOfOutputsInBundle()) && config.automaticWithdrawal){
+    else if(tableCaches.seeds[seedRound].withdrawalInProgress && queueAddresses.length === 0 && countUsersForPayout < parseInt(getNumberOfOutputsInBundle()) && config.automaticWithdrawal){
         var outputsTransactionLeft = parseInt(getNumberOfOutputsInBundle()) - parseInt(countUsersForPayout);
         if(outputsTransactionLeft > 0){
             getTopUsers(outputsTransactionLeft);
         }
     }
-    else if(db.select("caches").seeds[seedRound].withdrawalInProgress) {
+    else if(tableCaches.seeds[seedRound].withdrawalInProgress) {
         // Send to waiting sockets in queue their position
         sendQueuePosition();
         //No more addresses in queue or max countUsersForPayout, lets preprepareLocalTransfersp
