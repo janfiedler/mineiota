@@ -924,7 +924,7 @@ function doPow(){
             setTimeout(function(){
                 emitGlobalValues("", "bundle");
                 isReattachable();
-            }, 5000);
+            }, 10000);
 
             powWorker.kill();
         } else {
