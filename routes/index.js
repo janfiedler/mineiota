@@ -28,6 +28,7 @@ var countUsersForPayout = 0;
 var cacheBalance = 0;
 var cacheTransfers = [];
 var cacheTotalValue = 0;
+var cacheHashIotaratio = 0;
 var tempCachesBundleHash = "";
 // init table variable for file database
 var tableCaches;
@@ -62,6 +63,7 @@ setInterval(function () {
     getRates("price");
     // Wait 5 seconds and send new data to users
     setTimeout(function(){
+        cacheHashIotaratio = getHashIotaRatio();
         emitGlobalValues("", "rates");
     }, 5000);
 }, 60000);
@@ -124,7 +126,7 @@ function getTotalIotaPerSecond(){
     request.get({url: "https://api.coinhive.com/stats/site", qs: {"secret": config.coinhive.privateKey}}, function(error, response, body) {
         if (!error && response.statusCode == 200) {
             var info = JSON.parse(body);
-            totalIotaPerSecond = (info.hashesPerSecond*getHashIotaRatio()).toFixed(2);
+            totalIotaPerSecond = (info.hashesPerSecond*cacheHashIotaratio).toFixed(2);
             config.debug && console.log(new Date().toISOString()+" getTotalIotaPerSecond: " + totalIotaPerSecond);
             config.debug && console.log(new Date().toISOString()+" hashIotaRatio: " + hashIotaRatio);
         }
@@ -1182,7 +1184,7 @@ io.on('connection', function (socket) {
 
     // Emit actual values to all users
     emitGlobalValues(socket, "all");
-    emitGlobalValues("", "online");
+
     //Emit actual length of queue
     sendQueuePosition(socket);
 
@@ -1196,7 +1198,6 @@ io.on('connection', function (socket) {
             config.debug && console.log(new Date().toISOString()+' Warning: external compute unit is disconnected');
             externalComputeSocket = [];
         }
-        emitGlobalValues("", "online");
     });
 
     //When user set address check if is valid format
@@ -1339,10 +1340,7 @@ function emitGlobalValues(socket, type){
     var emitData = {};
     switch(String(type)) {
         case "all":
-            emitData = {balance: cacheBalance, bundle: tempCachesBundleHash, count: sockets.length, iotaUSD:iotaUSD, totalIotaPerSecond: totalIotaPerSecond, hashIotaRatio: getHashIotaRatio(), confirmedSpams: confirmedSpams};
-            break;
-        case "online":
-            emitData = {count: sockets.length};
+            emitData = {balance: cacheBalance, bundle: tempCachesBundleHash, count: sockets.length, iotaUSD:iotaUSD, totalIotaPerSecond: totalIotaPerSecond, hashIotaRatio: cacheHashIotaratio, confirmedSpams: confirmedSpams};
             break;
         case "balance":
             emitData = {balance: cacheBalance};
@@ -1354,7 +1352,7 @@ function emitGlobalValues(socket, type){
             emitData = {confirmedSpams: confirmedSpams};
             break;
         case "rates":
-            emitData = {iotaUSD:iotaUSD, totalIotaPerSecond: totalIotaPerSecond, hashIotaRatio: getHashIotaRatio()};
+            emitData = {count: sockets.length, iotaUSD:iotaUSD, totalIotaPerSecond: totalIotaPerSecond, hashIotaRatio: cacheHashIotaratio};
             break;
     }
     // balance, last bundle, minerr online, hashIotaRatio
