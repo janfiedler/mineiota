@@ -634,7 +634,14 @@ function isReattachable(){
     isNodeSynced("isReattachable", function repeat(error, synced) {
         if(!powInProgress && synced) {
             tableCaches = db.select("caches");
+            if(typeof tableCaches.seeds[seedRound].isReattachable !== 'undefined'){
             var checkAddressIsReattachable = tableCaches.seeds[seedRound].isReattachable;
+            } else {
+                setTimeout(function () {
+                    config.debug && console.log(new Date().toISOString() + 'Error: isReattachable is undefined, call isReattachable after 10 seconds');
+                    isReattachable();
+                }, 10000);
+            }
             var queueTimer = tableCaches.seeds[seedRound].queueTimer;
             var queueAddresses = db.select("queue").addresses;
 
