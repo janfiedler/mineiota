@@ -207,7 +207,7 @@ function cleanQueueDuplicity(){
             db.update("queue", tempNewQueue);
         }
     }
-    console.log("New count in queue: " + db.select("queue").addresses.length);
+    console.log("New count in queue: " + tempNewQueue.addresses.length);
 
 }
 
