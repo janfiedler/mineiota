@@ -633,7 +633,7 @@ function isReattachable(){
     isNodeSynced("isReattachable", function repeat(error, synced) {
         if(!powInProgress && synced) {
             tableCaches = db.select("caches");
-            if(typeof tableCaches.seeds[seedRound].isReattachable !== 'undefined'){
+            if(tableCaches.seeds[seedRound].isReattachable !== undefined){
             var checkAddressIsReattachable = tableCaches.seeds[seedRound].isReattachable;
             } else {
                 setTimeout(function () {
@@ -675,11 +675,24 @@ function isReattachable(){
                     if (!Bool) {
                         // We are done, next in queue can go
                         config.debug && console.log(new Date().toISOString() + " Success: Transaction is confirmed: " + checkAddressIsReattachable);
-                        withdrawUserBalance();
-
+                        // Get and emit new balance after transaction confirmation
+                        getBalanceOfCurrentSeed(function (error, result) {
+                            if(error !== null){
+                                console.log(new Date().toISOString() + " Error: getBalanceOfCurrentSeed!");
+                                console.log(error);
+                                // Repeat
+                                isReattachable();
+                            } else {
+                                if (result) {
+                                    withdrawUserBalance();
+                                } else {
+                                    switchToNextSeedPosition();
+                                }
+                            }
+                        });
                     } else if (queueTimer > nextQueueTimer && parseInt(queueTimer) !== 0) {
                         // Set and save next queue timer
-                        nextQueueTimer = nextQueueTimer + (parseInt(config.reattachAfterMinutes)*parseInt(2))
+                        nextQueueTimer = nextQueueTimer + (parseInt(config.reattachAfterMinutes)*parseInt(2));
                         tableCaches.seeds[seedRound].nextQueueTimer = nextQueueTimer;
                         db.update("caches", tableCaches);
                         // Add one minute to queue timer
@@ -698,8 +711,6 @@ function isReattachable(){
                 //Start new payout to next when is new seed added and have balance
                 if(tableCaches.seeds[seedRound].resetUserBalanceList.length > 0){
                     withdrawUserBalance();
-                    resetPayout();
-                    startNewPayout();
                 } else if(tableCaches.seeds[seedRound].balance > 0){
                     resetPayout();
                     startNewPayout();
@@ -737,8 +748,6 @@ function withdrawUserBalance(){
                         resetPayout();
                         // Start new payout
                         startNewPayout();
-                        // Get and emit new balance after transaction confirmation
-                        getRates("balance");
                     }
                 } else if (result === 0) {
                     // Reset
@@ -754,8 +763,6 @@ function withdrawUserBalance(){
                         resetPayout();
                         // Start new payout
                         startNewPayout();
-                        // Get and emit new balance after transaction confirmation
-                        getRates("balance");
                     }
                 } else if (result === -1) {
                     // Repeat if http error
@@ -1137,6 +1144,46 @@ function isValidChecksum(addressWithChecksum){
 }
 function noChecksum(addressWithChecksum){
     return iota.utils.noChecksum(addressWithChecksum);
+}
+
+function getBalanceOfCurrentSeed(callback) {
+    config.debug && console.log(new Date().toISOString()+" getBalanceOfCurrentSeed worker started");
+    config.debug && console.time('balance-time');
+    // Worker for get IOTA balance in interval
+    var balanceWorker = cp.fork('workers/balance.js');
+    // Send child process work to get IOTA balance
+    //We pass to worker keyIndex where start looking for funds
+    tableCaches = db.select("caches");
+    balanceWorker.send({seed:tableCaches.seeds[seedRound].seed,keyIndex:tableCaches.seeds[seedRound].keyIndex});
+
+    balanceWorker.on('message', function(balanceResult) {
+        config.debug && console.log(balanceResult);
+        if(balanceResult.inputs !== undefined && balanceResult.inputs.length > 0){
+            //We store actual keyIndex for next faster search and transaction
+            tableCaches.seeds[seedRound].keyIndex = balanceResult.inputs[0].keyIndex;
+
+            if(Number.isInteger(balanceResult.totalBalance)){
+                tableCaches.seeds[seedRound].balance = balanceResult.totalBalance;
+                cacheBalance = 0;
+                for (var i in tableCaches.seeds) {
+                    cacheBalance += tableCaches.seeds[i].balance;
+                }
+                config.debug && console.log(new Date().toISOString()+" Total balance: " + cacheBalance);
+            } else {
+                cacheBalance = " Running syncing of database, please wait! "
+            }
+
+            db.update("caches", tableCaches);
+            config.debug && console.log(new Date().toISOString()+' Balance: store actual keyIndex: '+balanceResult.inputs[0].keyIndex);
+        }
+        balanceWorker.kill();
+    });
+    balanceWorker.on('close', function () {
+        config.debug && console.log(new Date().toISOString()+' Closing getBalanceOfCurrentSeed worker');
+        console.timeEnd('balance-time');
+        callback(null, true);
+        emitGlobalValues("", "balance");
+    });
 }
 
 function getBalance(){
