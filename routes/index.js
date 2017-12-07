@@ -793,9 +793,19 @@ function switchToNextSeedPosition(){
         getRates("balance");
     }
 
-    setTimeout(function(){
-        isReattachable();
-    }, 30000);
+    var taskSetTimeoutIsReattachable = function () {
+        setTimeout(function(){
+            if(!balanceInProgress){
+                isReattachable();
+            } else {
+                config.debug && console.log(new Date().toISOString() + ' taskSetTimeoutIsReattachable: Balance is still in progress!!!');
+                taskSetTimeoutIsReattachable();
+            }
+        }, 30000);
+    };
+    taskSetTimeoutIsReattachable();
+
+
 }
 
 // Reset total on coinhive.com on request
