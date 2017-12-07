@@ -567,7 +567,6 @@ function prepareLocalTransfers(){
         // Receive results from child process
         if(result.status === "success"){
             // Select actual tableCache
-            tableCaches = db.select("caches");
             tableCaches.seeds[seedRound].trytes = result.result;
 
             //We store actual keyIndex for next faster search and transaction
@@ -902,7 +901,8 @@ function doPow(){
     var powWorker = cp.fork('workers/pow.js');
     // Send child process work to get IOTA balance
     //We pass to worker keyIndex where start looking for funds
-    powWorker.send({trytes:db.select("caches").seeds[seedRound].trytes});
+    tableCaches = db.select("caches");
+    powWorker.send({trytes:tableCaches.seeds[seedRound].trytes});
 
     powWorker.on('message', function(trytesResult) {
         // Receive results from child process
@@ -915,7 +915,6 @@ function doPow(){
             powWorker.kill();
             resetPayout();
         } else if(typeof trytesResult[0].bundle !== 'undefined') {
-            tableCaches = db.select("caches");
             tableCaches.seeds[seedRound].bundleHash = trytesResult[0].bundle;
             tempCachesBundleHash = trytesResult[0].bundle;
             db.update("caches", tableCaches);
@@ -925,11 +924,11 @@ function doPow(){
             powInProgress = false;
             // We have done PoW for transactions with value, now can use power for spamming
             blockSpammingProgress = false;
-            // Go to next seed
-            seedRound++;
-            // Wait 5 seconds after PoW is done, before skip to next seed
+            // Wait 10 seconds after PoW is done, before skip to next seed
             setTimeout(function(){
                 emitGlobalValues("", "bundle");
+                // Go to next seed
+                seedRound++;
                 isReattachable();
             }, 10000);
 
@@ -1147,7 +1146,6 @@ function getBalance(){
         config.debug && console.log(balanceResult);
         if(typeof balanceResult.inputs !== 'undefined' && balanceResult.inputs.length > 0){
             //We store actual keyIndex for next faster search and transaction
-            tableCaches = db.select("caches");
             tableCaches.seeds[seedRound].keyIndex = balanceResult.inputs[0].keyIndex;
 
             if(Number.isInteger(balanceResult.totalBalance)){
