@@ -17,6 +17,8 @@ Price is fixed in USD, so your reward can changing value of iota in time, until 
 * In log you can see how you receiving rewards in iota valuated to usd price.
 * Anytime you can click on update to get total iota in acutal prices ratio.
 * If you ready get your reward, click on Withdraw. Now you will be added to queue. Now you can wait on your reward or continue to mining. When you come in line, you will receive all actual reward in this time.
+* If for some reason you see your transaction is still panding after one day. Is possible, here is some error in iota tangle and transaction was skipped. In this case your reward is still on mineiota.com just
+take your address, do login again and make new withdraw request.
 
 ## TODO
 * You can see your position in queue until you close webpage, in next patch will be here function see your actual position next to your total balance unpaid.
