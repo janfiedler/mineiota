@@ -23,11 +23,16 @@ take your address, do login again and make new withdraw request.
 ## FEES
 * Fee is changing from 10% to 30% depend on volatility market. Because there is waiting  time around 5 days to get reward from coinhive and price is changing every minute. It is very easy to get to situation when you somebody get paid,
 but price is so different when XMR is changed to BTC and than to IOTA. This make losing funds.
-* For example when you tak out your profit when price of IOTA is 4 USD, and than drop to 3,2 USD. And after that is made exchange from xmr to btc to iota, this is 25% drop. So if fee is only 10% rest of 15% from all funds is gone.
+* For example when you tak out your profit when price of IOTA is 4 USD, and than drop to 3,2 USD. And after that is made exchange from XMR to BTC to IOTA, this is 25% drop. So if fee is only 10% rest of 15% from all funds is gone.
 For long term functionality is necessary cover this moves.
 * In short when price stop moving so much every day, fees can be lower.
 * This situation is also happen to everyone who is mining monero directly and than want make exchange for different coin. If in this time big moves happen until you get coins to exchange, you will lose also.
 * Math ((((xmrBtc/(1/payoutPer1MHashes))/1000000)/(miotaBtc/1000000))/(100/70))*256) part of (100/70) representing fee. So 100% / 70% you get value for 30% fee. If is formula (100/90) you get value for 10% fee.
+
+
+## HOW FEE IS USED
+* Default 10% fee is used for maintenance services and developing. Also for helping community by running nodes and donations to another projects.
+* If fee is bigger than 10%, all incomes from this part of funds is used for payouts all miners. Usage this higher fee is only cover volatility market.
 
 ## Issues
 If you have some issues, or ideas. Please be welcome uses tab Issues here on github. I try answer soon as posible
