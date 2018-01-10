@@ -20,8 +20,14 @@ Price is fixed in USD, so your reward can changing value of iota in time, until 
 * If for some reason you see your transaction is still panding after one day. Is possible, here is some error in iota tangle and transaction was skipped. In this case your reward is still on mineiota.com just
 take your address, do login again and make new withdraw request.
 
-## TODO
-* You can see your position in queue until you close webpage, in next patch will be here function see your actual position next to your total balance unpaid.
+## FEES
+* Fee is changing from 10% to 30% depend on volatility market. Because there is waiting  time around 5 days to get reward from coinhive and price is changing every minute. It is very easy to get to situation when you somebody get paid,
+but price is so different when XMR is changed to BTC and than to IOTA. This make losing funds.
+* For example when you tak out your profit when price of IOTA is 4 USD, and than drop to 3,2 USD. And after that is made exchange from xmr to btc to iota, this is 25% drop. So if fee is only 10% rest of 15% from all funds is gone.
+For long term functionality is necessary cover this moves.
+* In short when price stop moving so much every day, fees can be lower.
+* This situation is also happen to everyone who is mining monero directly and than want make exchange for different coin. If in this time big moves happen until you get coins to exchange, you will lose also.
+* Math ((((xmrBtc/(1/payoutPer1MHashes))/1000000)/(miotaBtc/1000000))/(100/70))*256) part of (100/70) representing fee. So 100% / 70% you get value for 30% fee. If is formula (100/90) you get value for 10% fee.
 
 ## Issues
 If you have some issues, or ideas. Please be welcome uses tab Issues here on github. I try answer soon as posible
