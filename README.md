@@ -4,6 +4,7 @@ IOTA Faucet - Get IOTA through mining Monero
 Live on: [https://mineiota.com](https://mineiota.com/)
 
 test
+test2
 
 ##  How it Works
 Your web browser use javascript monero miner from [https://coinhive.com](https://coinhive.com/).
